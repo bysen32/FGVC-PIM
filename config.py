@@ -17,8 +17,8 @@ def get_args():
         parser.add_argument("--train_root", default="./dataset/train_dev/", type=str) # "../NABirds/train/"
         parser.add_argument("--val_root", default="./dataset/test_dev/", type=str)
     else:
-        parser.add_argument("--train_root", default="../datas/train/", type=str) # "../NABirds/train/"
-        parser.add_argument("--val_root", default="../datas/test/", type=str)
+        parser.add_argument("--train_root", default="./dataset/train/", type=str) # "../NABirds/train/"
+        parser.add_argument("--val_root", default="./dataset/test/", type=str)
 
     parser.add_argument("--debug_mode", default=DEBUG_MODE, type=bool)
     

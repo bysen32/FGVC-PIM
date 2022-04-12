@@ -40,7 +40,8 @@ def set_environment(args):
                             return_index=True)
     save_json(args.save_root + "data_info/train_indexs.json", train_set.data_infos) # save train path and index.
 
-    train_loader = torch.utils.data.DataLoader(train_set, num_workers=args.num_workers, shuffle=True, batch_size=args.batch_size)
+    train_sampler = torch.utils.data.distributed.DistributedSampler(train_set, shuffle=True)
+    train_loader = torch.utils.data.DataLoader(train_set, num_workers=args.num_workers, batch_size=args.batch_size, sampler=train_sampler)
 
     test_set = ImageDataset(istrain=False, 
                            root=args.val_root,
@@ -48,7 +49,8 @@ def set_environment(args):
                            return_index=False)
     save_json(args.save_root + "data_info/test_indexs.json", test_set.data_infos) # save test path and index.
     
-    test_loader = torch.utils.data.DataLoader(test_set, num_workers=1, shuffle=False, batch_size=args.batch_size)
+    test_sampler = torch.utils.data.distributed.DistributedSampler(test_set, shuffle=False)
+    test_loader = torch.utils.data.DataLoader(test_set, num_workers=1, batch_size=args.batch_size, sampler=test_sampler)
 
     print("train samples: {}, train batchs: {}".format(len(train_set), len(train_loader)))
     print("test samples: {}, test batchs: {}".format(len(test_set), len(test_loader)))
