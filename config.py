@@ -1,8 +1,10 @@
 import argparse
+from distutils.debug import DEBUG
 import os
 
 
 DEBUG_MODE = True
+DEV_MODE = True
 
 def get_args():
 
@@ -11,14 +13,15 @@ def get_args():
     parser.add_argument("--exp_name", default="CUB200#SwinVit@TWCC1-GCN1-005")
 
     
-    if DEBUG_MODE:
+    if DEV_MODE:
         parser.add_argument("--train_root", default="./dataset/train_dev/", type=str) # "../NABirds/train/"
         parser.add_argument("--val_root", default="./dataset/test_dev/", type=str)
-        parser.add_argument("--debug_mode", default=True, type=bool)
     else:
         parser.add_argument("--train_root", default="../datas/train/", type=str) # "../NABirds/train/"
         parser.add_argument("--val_root", default="../datas/test/", type=str)
-        parser.add_argument("--debug_mode", default=False, type=bool)
+
+    parser.add_argument("--debug_mode", default=DEBUG_MODE, type=bool)
+    
 
     parser.add_argument("--data_size", default=384, type=int)
     parser.add_argument("--num_rows", default=0, type=int)
@@ -46,7 +49,7 @@ def get_args():
     parser.add_argument("--batch_size", default=4, type=int)
     
     # about model building
-    if DEBUG_MODE:
+    if DEV_MODE:
         parser.add_argument("--num_classes", default=10, type=int)
     else:
         parser.add_argument("--num_classes", default=200, type=int)
@@ -63,7 +66,7 @@ def get_args():
 
     parser.add_argument("--log_freq", default=20, type=int)
 
-    if DEBUG_MODE:
+    if DEV_MODE or DEBUG_MODE:
         parser.add_argument("--test_freq", default=1, type=int)
     else:
         parser.add_argument("--test_freq", default=5, type=int)
