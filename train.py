@@ -100,14 +100,16 @@ def set_environment(args):
                 global_feature_dim=args.global_feature_dim
             )
 
-    torch.cuda.set_device(args.local_rank)
-    torch.distributed.init_process_group(backend='nccl')
-    # model.to(args.device)
-    model.cuda(args.local_rank)
-    model = torch.nn.parallel.DistributedDataParallel(model,
-                                device_ids = [args.local_rank],
-                                broadcast_buffers = False,
-                                find_unused_parameters = True)
+    if args.debug_mode:
+        model.to(args.device)
+    else:
+        torch.cuda.set_device(args.local_rank)
+        torch.distributed.init_process_group(backend='nccl')
+        model.cuda(args.local_rank)
+        model = torch.nn.parallel.DistributedDataParallel(model,
+                                    device_ids = [args.local_rank],
+                                    broadcast_buffers = False,
+                                    find_unused_parameters = True)
     
     if args.optimizer_name == "sgd":
         optimizer = torch.optim.SGD(model.parameters(), 

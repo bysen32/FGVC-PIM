@@ -1,16 +1,25 @@
 import argparse
 import os
 
+
+DEBUG_MODE = True
+
 def get_args():
 
     parser = argparse.ArgumentParser("FineGrained Image Classification Task")
     # save path and dataset information
     parser.add_argument("--exp_name", default="CUB200#SwinVit@TWCC1-GCN1-005")
+
     
-    # parser.add_argument("--train_root", default="../datas/train/", type=str) # "../NABirds/train/"
-    # parser.add_argument("--val_root", default="../datas/test/", type=str)
-    parser.add_argument("--train_root", default="./dataset/train_dev/", type=str) # "../NABirds/train/"
-    parser.add_argument("--val_root", default="./dataset/test_dev/", type=str)
+    if DEBUG_MODE:
+        parser.add_argument("--train_root", default="./dataset/train_dev/", type=str) # "../NABirds/train/"
+        parser.add_argument("--val_root", default="./dataset/test_dev/", type=str)
+        parser.add_argument("--debug_mode", default=True, type=bool)
+    else:
+        parser.add_argument("--train_root", default="../datas/train/", type=str) # "../NABirds/train/"
+        parser.add_argument("--val_root", default="../datas/test/", type=str)
+        parser.add_argument("--debug_mode", default=False, type=bool)
+
     parser.add_argument("--data_size", default=384, type=int)
     parser.add_argument("--num_rows", default=0, type=int)
     parser.add_argument("--num_cols", default=0, type=int)
@@ -37,7 +46,10 @@ def get_args():
     parser.add_argument("--batch_size", default=4, type=int)
     
     # about model building
-    parser.add_argument("--num_classes", default=200, type=int)
+    if DEBUG_MODE:
+        parser.add_argument("--num_classes", default=10, type=int)
+    else:
+        parser.add_argument("--num_classes", default=200, type=int)
     
     # abput learning rate scheduler
     parser.add_argument("--warmup_batchs", default=800, type=int)
@@ -51,10 +63,14 @@ def get_args():
 
     parser.add_argument("--log_freq", default=20, type=int)
 
-    parser.add_argument("--test_freq", default=5, type=int)
+    if DEBUG_MODE:
+        parser.add_argument("--test_freq", default=1, type=int)
+    else:
+        parser.add_argument("--test_freq", default=5, type=int)
     parser.add_argument("--test_global_top_confs", default=[1, 3, 5], type=list)
     parser.add_argument("--test_select_top_confs", default=[1, 3, 5, 7, 9], type=list)
 
+    # data distributed parallel
     parser.add_argument("--local_rank", type=int)
 
     args = parser.parse_args()
