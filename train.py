@@ -151,7 +151,10 @@ def train(args, epoch, model, scaler, optimizer, schedules, train_loader, save_d
         batch_size = labels.size(0)
        
         """ forward """
-        datas, labels = datas.to(args.device), labels.to(args.device)
+        if args.debug_mode:
+            datas, labels = datas.to(args.device), labels.to(args.device)
+        else:
+            datas, labels = datas.cuda(args.local_rank), labels.cuda(args.local_rank)
         
         with torch.cuda.amp.autocast():
             losses, accuracys = model(datas, labels)
@@ -215,7 +218,10 @@ def test(args, model, test_loader):
             batch_size = labels.size(0)
             total += batch_size
 
-            datas, labels = datas.to(args.device), labels.to(args.device)
+            if args.debug_mode:
+                datas, labels = datas.to(args.device), labels.to(args.device)
+            else:
+                datas, labels = datas.cuda(args.local_rank), labels.cuda(args.local_rank)
 
             """ forward """
             _, batch_accs, batch_logits = model(datas, labels, return_preds=True)
