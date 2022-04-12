@@ -441,9 +441,15 @@ if __name__ == "__main__":
                 wandb.run.summary["best_accuracy"] = best_acc # upload to wandb
                 wandb.run.summary["best_epoch"] = epoch+1 # upload to wandb
                 if os.path.isfile(args.save_root + "backup/best.pth"):
-                    os.remove(args.save_root + "backup/best.pth")
+                    try:
+                        os.remove(args.save_root + "backup/best.pth")
+                    except print(0):
+                        pass
                 torch.save(save_dict, args.save_root + "backup/best.pth")
 
         # save to last.pt
         if os.path.isfile(args.save_root + "backup/last.pth"):
-            os.remove(args.save_root + "backup/last.pth")
+            try:
+                os.remove(args.save_root + "backup/last.pth")
+            except print(0):
+                pass
