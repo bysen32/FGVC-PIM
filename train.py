@@ -100,7 +100,6 @@ def set_environment(args):
                 global_feature_dim=args.global_feature_dim
             )
 
-    # model = nn.DataParallel(model)
     torch.cuda.set_device(args.local_rank)
     torch.distributed.init_process_group(backend='nccl')
     # model.to(args.device)
@@ -379,21 +378,19 @@ def test(args, model, test_loader):
     msg = {}
     for name in accuracys:
         msg["test_acc/test_acc_"+name] = 100*accuracys[name]/total
-    wandb.log(msg)
 
     best_acc = -1
     for name in msg:
         if msg[name]>best_acc:
             best_acc = msg[name]
 
+    wandb.log(msg)
+
     return  best_acc
 
 
 
 if __name__ == "__main__":
-    # os.environ['CUDA_VISIBLE_DEVICES'] = "0,1"
-    # torch.distributed.init_process_group(backend='nccl')
-
     args = get_args()
     
     wandb.init(entity='bysen32',

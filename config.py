@@ -9,8 +9,8 @@ def get_args():
     
     # parser.add_argument("--train_root", default="../datas/train/", type=str) # "../NABirds/train/"
     # parser.add_argument("--val_root", default="../datas/test/", type=str)
-    parser.add_argument("--train_root", default="./dataset/train/", type=str) # "../NABirds/train/"
-    parser.add_argument("--val_root", default="./dataset/test/", type=str)
+    parser.add_argument("--train_root", default="./dataset/train_dev/", type=str) # "../NABirds/train/"
+    parser.add_argument("--val_root", default="./dataset/test_dev/", type=str)
     parser.add_argument("--data_size", default=384, type=int)
     parser.add_argument("--num_rows", default=0, type=int)
     parser.add_argument("--num_cols", default=0, type=int)
@@ -22,7 +22,7 @@ def get_args():
         choices=["sgd", 'adamw'])
     
     parser.add_argument("--use_fpn", default=True, type=bool)
-    parser.add_argument("--use_ori", default=False, type=bool)
+    parser.add_argument("--use_ori", default=True, type=bool)
     parser.add_argument("--use_gcn", default=True, type=bool)
     parser.add_argument("--use_layers", 
         default=[True, True, True, True], type=list)
