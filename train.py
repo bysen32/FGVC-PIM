@@ -198,7 +198,7 @@ def test(args, model, test_loader):
 
     total = 0
 
-    accuracys = {"sum":0}
+    accuracys = {"sum":0, "vote":0, "vote_select":0}
     global_accs_template = {}
     for i in args.test_global_top_confs:
         global_accs_template["global_top"+str(i)] = 0
@@ -260,7 +260,7 @@ def test(args, model, test_loader):
                 else:
                     logit_sum += batch_logits[name]
 
-            accuracys["sum"] = torch.max(logit_sum, dim=-1)[1].eq(labels).sum().item()
+            accuracys["sum"] += torch.max(logit_sum, dim=-1)[1].eq(labels).sum().item()
 
             # 2. ========= vote =========
             pred_counter = torch.zeros([batch_size, args.num_classes])
@@ -290,8 +290,8 @@ def test(args, model, test_loader):
             vote = torch.max(pred_counter, dim=-1)[1]
             vote_select = torch.max(pred_counter_select, dim=-1)[1]
 
-            accuracys["vote"] = vote.eq(labels).sum().item()
-            accuracys["vote_select"] = vote_select.eq(labels).sum().item()
+            accuracys["vote"] += vote.eq(labels).sum().item()
+            accuracys["vote_select"] += vote_select.eq(labels).sum().item()
 
             # 3. ========= bigger confidence prediction =========
             # 3.1 === global ===
