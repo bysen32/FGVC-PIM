@@ -34,27 +34,6 @@ def set_environment(args):
 
     args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    train_set = ImageDataset(istrain=True, 
-                            root=args.train_root,
-                            data_size=args.data_size,
-                            return_index=True)
-    save_json(args.save_root + "data_info/train_indexs.json", train_set.data_infos) # save train path and index.
-
-    train_sampler = torch.utils.data.distributed.DistributedSampler(train_set, shuffle=True)
-    train_loader = torch.utils.data.DataLoader(train_set, num_workers=args.num_workers, batch_size=args.batch_size, sampler=train_sampler)
-
-    test_set = ImageDataset(istrain=False, 
-                           root=args.val_root,
-                           data_size=args.data_size,
-                           return_index=False)
-    save_json(args.save_root + "data_info/test_indexs.json", test_set.data_infos) # save test path and index.
-    
-    test_sampler = torch.utils.data.distributed.DistributedSampler(test_set, shuffle=False)
-    test_loader = torch.utils.data.DataLoader(test_set, num_workers=1, batch_size=args.batch_size, sampler=test_sampler)
-
-    print("train samples: {}, train batchs: {}".format(len(train_set), len(train_loader)))
-    print("test samples: {}, test batchs: {}".format(len(test_set), len(test_loader)))
-    
     if args.model_name == "efficientnet-b7":
         from models.EfficientNet_FPN import DetEfficientNet
         model = DetEfficientNet(in_size=args.data_size,
@@ -112,6 +91,33 @@ def set_environment(args):
                                     device_ids = [args.local_rank],
                                     broadcast_buffers = False,
                                     find_unused_parameters = True)
+    
+    train_set = ImageDataset(istrain=True, 
+                            root=args.train_root,
+                            data_size=args.data_size,
+                            return_index=True)
+    save_json(args.save_root + "data_info/train_indexs.json", train_set.data_infos) # save train path and index.
+
+    if args.debug_mode:
+        train_loader = torch.utils.data.DataLoader(train_set, num_workers=args.num_workers, batch_size=args.batch_size, shuffle=True)
+    else:
+        train_sampler = torch.utils.data.distributed.DistributedSampler(train_set, shuffle=True, rank=args.local_rank)
+        train_loader = torch.utils.data.DataLoader(train_set, num_workers=args.num_workers, batch_size=args.batch_size, sampler=train_sampler)
+
+    test_set = ImageDataset(istrain=False, 
+                            root=args.val_root,
+                            data_size=args.data_size,
+                            return_index=False)
+    save_json(args.save_root + "data_info/test_indexs.json", test_set.data_infos) # save test path and index.
+    
+    if args.debug_mode:
+        test_loader = torch.utils.data.DataLoader(test_set, num_workers=1, batch_size=args.batch_size, shuffle=False)
+    else:
+        test_sampler = torch.utils.data.distributed.DistributedSampler(test_set, shuffle=False, rank=args.local_rank)
+        test_loader = torch.utils.data.DataLoader(test_set, num_workers=1, batch_size=args.batch_size, sampler=test_sampler)
+
+    print("train samples: {}, train batchs: {}".format(len(train_set), len(train_loader)))
+    print("test samples: {}, test batchs: {}".format(len(test_set), len(test_loader)))
     
     if args.optimizer_name == "sgd":
         optimizer = torch.optim.SGD(model.parameters(), 
