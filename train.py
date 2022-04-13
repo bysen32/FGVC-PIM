@@ -101,7 +101,7 @@ def set_environment(args):
     if args.debug_mode:
         train_loader = torch.utils.data.DataLoader(train_set, num_workers=args.num_workers, batch_size=args.batch_size, shuffle=True)
     else:
-        train_sampler = torch.utils.data.distributed.DistributedSampler(train_set, shuffle=True, rank=args.local_rank)
+        train_sampler = torch.utils.data.distributed.DistributedSampler(train_set, shuffle=True)
         train_loader = torch.utils.data.DataLoader(train_set, num_workers=args.num_workers, batch_size=args.batch_size, sampler=train_sampler)
 
     test_set = ImageDataset(istrain=False, 
@@ -110,11 +110,7 @@ def set_environment(args):
                             return_index=False)
     save_json(args.save_root + "data_info/test_indexs.json", test_set.data_infos) # save test path and index.
     
-    if args.debug_mode:
-        test_loader = torch.utils.data.DataLoader(test_set, num_workers=1, batch_size=args.batch_size, shuffle=False)
-    else:
-        test_sampler = torch.utils.data.distributed.DistributedSampler(test_set, shuffle=False, rank=args.local_rank)
-        test_loader = torch.utils.data.DataLoader(test_set, num_workers=1, batch_size=args.batch_size, sampler=test_sampler)
+    test_loader = torch.utils.data.DataLoader(test_set, num_workers=1, batch_size=args.batch_size, shuffle=False)
 
     print("train samples: {}, train batchs: {}".format(len(train_set), len(train_loader)))
     print("test samples: {}, test batchs: {}".format(len(test_set), len(test_loader)))
@@ -347,16 +343,14 @@ def test(args, model, test_loader):
 
 
             # 3.2 === select ===
-            tmp_s_accs = copy.deepcopy(select_accs_template)
             select_confs = []
             select_features = []
             for name in batch_logits:
-                if "selected" not in name:
-                    continue
-                features = batch_logits[name] # [B, S, C]
-                conf, pred = torch.max(features, dim=-1)
-                select_confs.append(conf)
-                select_features.append(features)
+                if "selected" in name:
+                    features = batch_logits[name] # [B, S, C]
+                    conf, pred = torch.max(features, dim=-1)
+                    select_confs.append(conf)
+                    select_features.append(features)
             
             if len(select_confs) > 0:
                 select_confs = torch.cat(select_confs, dim=1)
@@ -408,9 +402,9 @@ if __name__ == "__main__":
     args = get_args()
     
     wandb.init(entity='bysen32',
-               project="paper2",
-               name=args.exp_name,
-               config=args)
+                project="paper2",
+                name=args.exp_name,
+                config=args)
 
     train_loader, test_loader, model, optimizer, schedule = set_environment(args)
 
