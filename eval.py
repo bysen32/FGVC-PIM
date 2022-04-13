@@ -16,7 +16,6 @@ import tqdm
 def set_environment(args):
 
     args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-   
 
     test_set = ImageDataset(istrain=False, 
                            root=args.val_root,
@@ -75,8 +74,16 @@ def set_environment(args):
             )
 
     checkpoint = torch.load(args.pretrained_path)
+    if args.debug_mode:
+        model.to(args.device)
+    else:
+        torch.distributed.init_process_group(backend='nccl')
+        torch.cuda.set_device(args.local_rank)
+        model.cuda(args.local_rank)
+        model = torch.nn.parallel.DistributedDataParallel(model, device_ids = [args.local_rank])
+
     model.load_state_dict(checkpoint['model'])
-    model.to(args.device)
+
 
     return test_loader, model
 
