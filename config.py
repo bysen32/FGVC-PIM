@@ -1,9 +1,10 @@
 import argparse
 from distutils.debug import DEBUG
 import os
+import sys
 
 
-DEBUG_MODE = True
+DEBUG_MODE = True if sys.gettrace() else False
 DEV_MODE = True
 
 def get_args():

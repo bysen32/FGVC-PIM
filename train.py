@@ -205,8 +205,6 @@ def train(args, epoch, model, scaler, optimizer, schedules, train_loader, save_d
 
 
 def test(args, model, test_loader):
-    
-
     total = 0
 
     accuracys = {"sum":0, "vote":0, "vote_select":0}
@@ -290,16 +288,15 @@ def test(args, model, test_loader):
                         for pred in batch_pred:
                             pred_cls = pred.item()
                             pred_counter_select[bid][pred_cls] += 1
-                    continue
-
-                """
-                [B, C]
-                """
-                preds = torch.max(batch_logits[name], dim=-1)[1]
-                for bid in range(batch_size):
-                    pred_cls = preds[bid]
-                    pred_counter[bid][pred_cls] += 1
-                    pred_counter_select[bid][pred_cls] += 1
+                else:
+                    """
+                    [B, C]
+                    """
+                    preds = torch.max(batch_logits[name], dim=-1)[1]
+                    for bid in range(batch_size):
+                        pred_cls = preds[bid]
+                        pred_counter[bid][pred_cls] += 1
+                        pred_counter_select[bid][pred_cls] += 1
             
             vote = torch.max(pred_counter, dim=-1)[1]
             vote_select = torch.max(pred_counter_select, dim=-1)[1]
@@ -347,6 +344,7 @@ def test(args, model, test_loader):
                 if name not in accuracys:
                     accuracys[name] = 0
                 accuracys[name] += tmp_g_accs[name]
+
 
             # 3.2 === select ===
             tmp_s_accs = copy.deepcopy(select_accs_template)
