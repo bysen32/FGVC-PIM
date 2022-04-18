@@ -253,6 +253,10 @@ class SwinVit12(nn.Module):
         # fpn module
         if use_fpn:
             for i in range(self.num_layers):
+                # fpn_0: 384  -> 384  -> global_feature_dim
+                # fpn_1: 768  -> 768  -> global_feature_dim
+                # fpn_2: 1536 -> 1536 -> global_feature_dim
+                # fpn_3: 1536 -> 1536 -> global_feature_dim
                 self.add_module("fpn_"+str(i), 
                                 nn.Sequential(
                                     nn.Linear(self.layer_dims[i][1], self.layer_dims[i][1]),
@@ -261,6 +265,8 @@ class SwinVit12(nn.Module):
                                 ))
 
                 if i != 0:
+                    # i=1 576 != 2304 upsample_1 Conv1d(576, 2304)
+                    # i=2 144 != 576  upsample_2 Conv1d(144, 576)
                     if self.layer_dims[i][0] != self.layer_dims[i-1][0]:
                         self.add_module("upsample_"+str(i), 
                                             nn.Conv1d(self.layer_dims[i][0], self.layer_dims[i-1][0], 1)
@@ -435,11 +441,15 @@ class SwinVit12(nn.Module):
 
         # = = = = = fpn = = = = =
         if self.use_fpn:
+            # layers[3] = self.fpn_3(layers[3])
             layers[-1] = getattr(self, "fpn_"+str(len(layers)-1))(layers[-1])
             for i in range(self.num_layers-1, 0, -1):
                 if self.layer_dims[i][0] != self.layer_dims[i-1][0]:
+                    # i=2 layers[1] = self.fpn_1(layers[1]) + self.upsample_2(layers[2])
+                    # i=1 layers[0] = self.fpn_2(layers[2]) + self.upsample_2(layers[3])
                     layers[i-1] = getattr(self, "fpn_"+str(i-1))(layers[i-1]) + getattr(self, "upsample_"+str(i))(layers[i])
                 else:
+                    # i=3 layers[2] = self.fpn_2(layers[2]) + layers[3]
                     layers[i-1] = getattr(self, "fpn_"+str(i-1))(layers[i-1]) + layers[i]
         
         # layers prediction
