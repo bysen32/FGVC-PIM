@@ -504,8 +504,15 @@ class SwinVit12(nn.Module):
         # selected prediction.
         if self.use_gcn:
             selected_features = torch.cat(selected_features, dim=1) # B, S, C
-            selected_features = selected_features.transpose(1, 2).contiguous()
-            logits["gcn"] = self.gcn(selected_features)
+            # selected_features = selected_features.transpose(1, 2).contiguous()
+            # logits["gcn"] = self.gcn(selected_features)
+            # losses["gcn"] = self.crossentropy(logits["gcn"], labels)
+            # accuracys["gcn"] = self._accuracy(logits["gcn"], labels)
+            l4_x = self.extractor.layers[3](selected_features)
+            l4_x = self.extractor.norm(l4_x)
+            l4_x = self.extractor.avgpool(l4_x.transpose(1, 2))
+            l4_x = torch.flatten(l4_x, 1)
+            logits["gcn"] = self.extractor.head(l4_x)
             losses["gcn"] = self.crossentropy(logits["gcn"], labels)
             accuracys["gcn"] = self._accuracy(logits["gcn"], labels)
 
