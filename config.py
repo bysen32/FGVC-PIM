@@ -38,12 +38,12 @@ def get_args():
     parser.add_argument("--use_ori", default=True, type=bool)
     parser.add_argument("--use_gcn", default=True, type=bool)
     parser.add_argument("--use_layers", 
-        default=[True, True, True, True], type=list)
+        default=[True, True, True], type=list)
     parser.add_argument("--use_selections", 
         default=[True, True, True], type=list)
     parser.add_argument("--num_selects",
         default=[2048, 512, 128], type=list)
-    parser.add_argument("--use_gcn_fusion", 
+    parser.add_argument("--use_gcn_fusions", 
         default=[True, True, True], type=list)
     parser.add_argument("--num_fusions", 
         default=[48, 48, 48], type=list)

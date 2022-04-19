@@ -41,6 +41,8 @@ class GCN_Fusion(nn.Module):
         self.conv_q1 = nn.Conv1d(in_features, in_features//4, 1)
         self.conv_k1 = nn.Conv1d(in_features, in_features//4, 1)
         self.alpha1 = nn.Parameter(torch.zeros(1))
+
+        self.tanh = nn.Tanh()
     
     def forward(self, x):
         x = self.pool1(x)
@@ -50,7 +52,7 @@ class GCN_Fusion(nn.Module):
         A1 = self.adj1 + A1 * self.alpha1
         x = self.conv1(x)
         x = torch.matmul(x, A1)
-        x = self.batch_norm(x)
+        x = self.batch_norm1(x)
         return x
 
 class GCN(nn.Module):
@@ -224,7 +226,7 @@ class SwinVit12(nn.Module):
                  use_layers: list,
                  use_selections: list,
                  num_selects: list,
-                 use_gcn_fusion: list,
+                 use_gcn_fusions: list,
                  num_fusions: list,
                  global_feature_dim: int = 2048):
         super(SwinVit12, self).__init__()
@@ -255,6 +257,7 @@ class SwinVit12(nn.Module):
         self.check_input(use_layers, use_selections) # layer --> selection
         self.use_layers = use_layers
         self.use_selections = use_selections
+        self.use_gcn_fusions = use_gcn_fusions
         self.global_feature_dim = global_feature_dim
         self.use_fpn = use_fpn
         self.use_ori = use_ori
@@ -324,7 +327,7 @@ class SwinVit12(nn.Module):
                            num_classes = num_classes)
         
         for i in range(self.num_layers):
-            if use_gcn_fusion[i]:
+            if use_gcn_fusions[i]:
                 self.add_module("gcn_fusion"+str(i),
                     GCN_Fusion(in_joints = num_selects[i],
                                out_joints = num_fusions[i],
@@ -522,15 +525,17 @@ class SwinVit12(nn.Module):
         if self.use_ori:
             fusioned_features = []
             for i in range(self.num_layers):
-                if self.use_fusions[i]:
-                    ff = getattr(self, "gcn_fusion"+str(i))(selected_features[i])
+                if self.use_gcn_fusions[i]:
+                    ff = selected_features[i].transpose(1,2).contiguous()
+                    ff = getattr(self, "gcn_fusion"+str(i))(ff)
                     fusioned_features.append(ff)
-            fusioned_features = torch.cat(fusioned_features, dim=1) # B, S, C
+            fusioned_features = torch.cat(fusioned_features, dim=2) # B, S, C
+            fusioned_features = fusioned_features.transpose(1, 2).contiguous()
             l4 = self.extractor.layers[3](fusioned_features)
 
-            if not self.only_ori:
-                B, C, S, S = l4.shape
-                l4 = l4.view(B, C, -1).transpose(1, 2).contiguous()
+            # if not self.only_ori:
+            #     B, C, S, S = l4.shape
+            #     l4 = l4.view(B, C, -1).transpose(1, 2).contiguous()
             ori_x = self.extractor.norm(l4)  # B L C
             ori_x = self.extractor.avgpool(ori_x.transpose(1, 2))  # B C 1
             ori_x = torch.flatten(ori_x, 1)

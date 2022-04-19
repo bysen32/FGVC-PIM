@@ -78,7 +78,7 @@ def set_environment(args):
                 use_layers=args.use_layers,
                 use_selections=args.use_selections,
                 num_selects=args.num_selects,
-                use_gcn_fusion=args.use_gcn_fusion,
+                use_gcn_fusions=args.use_gcn_fusions,
                 num_fusions=args.num_fusions,
                 global_feature_dim=args.global_feature_dim
             )
