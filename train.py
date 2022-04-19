@@ -249,6 +249,8 @@ def test(args, model, test_loader):
                     batch_logits[name] = torch.softmax(batch_logits[name], dim=-1)
                 elif name in ["gcn"]:
                     batch_logits[name] = torch.softmax(batch_logits[name], dim=-1)
+                elif "fusion" in name:
+                    batch_logits[name] = torch.softmax(batch_logits[name], dim=1)
                 
                 batch_logits[name] = batch_logits[name].cpu()
 

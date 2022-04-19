@@ -520,9 +520,20 @@ class SwinVit12(nn.Module):
                     
                     logits["l"+str(i)+"_selected"] = sl["selected"]
                     # confidences["l"+str(i)+"_selected"] = sc
-                
+
         # original prediction.
         if self.use_ori:
+            if not self.only_ori:
+                B, C, S, S = layers[-1].shape
+                layers[-1] = layers[-1].view(B, C, -1).transpose(1, 2).contiguous()
+            ori_x = self.extractor.norm(layers[-1])  # B L C
+            ori_x = self.extractor.avgpool(ori_x.transpose(1, 2))  # B C 1
+            ori_x = torch.flatten(ori_x, 1)
+            logits["ori"] = self.extractor.head(ori_x)
+            losses["ori"] = self.crossentropy(logits["ori"], labels)
+            accuracys["ori"] = self._accuracy(logits["ori"], labels)
+        
+        if self.use_gcn_fusions:
             fusioned_features = []
             for i in range(self.num_layers):
                 if self.use_gcn_fusions[i]:
@@ -531,17 +542,17 @@ class SwinVit12(nn.Module):
                     fusioned_features.append(ff)
             fusioned_features = torch.cat(fusioned_features, dim=2) # B, S, C
             fusioned_features = fusioned_features.transpose(1, 2).contiguous()
-            l4 = self.extractor.layers[3](fusioned_features)
+            l4 = self.extractor.layers[-1](fusioned_features)
 
             # if not self.only_ori:
             #     B, C, S, S = l4.shape
             #     l4 = l4.view(B, C, -1).transpose(1, 2).contiguous()
-            ori_x = self.extractor.norm(l4)  # B L C
-            ori_x = self.extractor.avgpool(ori_x.transpose(1, 2))  # B C 1
-            ori_x = torch.flatten(ori_x, 1)
-            logits["ori"] = self.extractor.head(ori_x)
-            losses["ori"] = self.crossentropy(logits["ori"], labels)
-            accuracys["ori"] = self._accuracy(logits["ori"], labels)
+            l4 = self.extractor.norm(l4)  # B L C
+            l4 = self.extractor.avgpool(l4.transpose(1, 2))  # B C 1
+            l4 = torch.flatten(l4, 1)
+            logits["fusion"] = self.extractor.head(l4)
+            losses["fusion"] = self.crossentropy(logits["fusion"], labels)
+            accuracys["fusion"] = self._accuracy(logits["fusion"], labels)
 
         # selected prediction.
         if self.use_gcn:
