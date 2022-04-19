@@ -534,16 +534,17 @@ class SwinTransformer(nn.Module):
         l1 = self.layers[0](x)
         l2 = self.layers[1](l1)
         l3 = self.layers[2](l2)
-        l4 = self.layers[3](l3)
+        # l4 = self.layers[3](l3)
         # x = self.norm(l4)  # B L C
         # x = self.avgpool(x.transpose(1, 2))  # B C 1
         # x = torch.flatten(x, 1)
-        return l1, l2, l3, l4
+        return l1, l2, l3#, l4
 
     def forward(self, x):
-        l1, l2, l3, l4 = self.forward_features(x)
+        l1, l2, l3 = self.forward_features(x)
+        # l1, l2, l3, l4 = self.forward_features(x)
         # x = self.head(x)
-        return l1, l2, l3, l4
+        return l1, l2, l3
 
 
 def _create_swin_transformer(variant, pretrained=False, default_cfg=None, **kwargs):
