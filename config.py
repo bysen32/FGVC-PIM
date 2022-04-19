@@ -40,9 +40,13 @@ def get_args():
     parser.add_argument("--use_layers", 
         default=[True, True, True, True], type=list)
     parser.add_argument("--use_selections", 
-        default=[True, True, True, True], type=list)
+        default=[True, True, True], type=list)
     parser.add_argument("--num_selects",
-        default=[2048, 512, 128, 32], type=list)
+        default=[2048, 512, 128], type=list)
+    parser.add_argument("--use_gcn_fusion", 
+        default=[True, True, True], type=list)
+    parser.add_argument("--num_fusions", 
+        default=[48, 48, 48], type=list)
     parser.add_argument("--global_feature_dim", default=1536, type=int)
     
     # loader

@@ -23,6 +23,36 @@ def load_model_weights(model, model_path):
             print('could not load layer: {}, not in checkpoint'.format(key))
     return model
 
+class GCN_Fusion(nn.Module):
+    def __init__(self,
+                 in_joints: int,
+                 out_joints: int,
+                 in_features: int,
+                 use_global_token: bool=False):
+        super(GCN_Fusion, self).__init__()
+
+        self.pool1 = nn.Linear(in_joints, out_joints)
+
+        A = torch.eye(out_joints)/100 + 1/100
+        self.adj1 = nn.Parameter(copy.deepcopy(A))
+        self.conv1 = nn.Conv1d(in_features, in_features, 1)
+        self.batch_norm1 = nn.BatchNorm1d(in_features)
+
+        self.conv_q1 = nn.Conv1d(in_features, in_features//4, 1)
+        self.conv_k1 = nn.Conv1d(in_features, in_features//4, 1)
+        self.alpha1 = nn.Parameter(torch.zeros(1))
+    
+    def forward(self, x):
+        x = self.pool1(x)
+        q1 = self.conv_q1(x).mean(1)
+        k1 = self.conv_k1(x).mean(1)
+        A1 = self.tanh(q1.unsqueeze(-1) - k1.unsqueeze(1))
+        A1 = self.adj1 + A1 * self.alpha1
+        x = self.conv1(x)
+        x = torch.matmul(x, A1)
+        x = self.batch_norm(x)
+        return x
+
 class GCN(nn.Module):
 
     def __init__(self, 
@@ -194,6 +224,8 @@ class SwinVit12(nn.Module):
                  use_layers: list,
                  use_selections: list,
                  num_selects: list,
+                 use_gcn_fusion: list,
+                 num_fusions: list,
                  global_feature_dim: int = 2048):
         super(SwinVit12, self).__init__()
         """
@@ -209,8 +241,8 @@ class SwinVit12(nn.Module):
         self.in_size = in_size
         self.layer_dims = [[2304, 384],
                            [576, 768],
-                           [144, 1536],
-                           [144, 1536]]
+                           [144, 1536],]
+                           #[144, 1536]]
 
         self.num_layers = len(self.layer_dims)
         
@@ -238,25 +270,22 @@ class SwinVit12(nn.Module):
 
         self.only_ori = use_ori and not (use_fpn or use_gcn)
         
-        if self.only_ori:
-            self.extractor.head = nn.Sequential(
-                nn.Linear(global_feature_dim, global_feature_dim),
-                nn.ReLU(),
-                nn.Dropout(p=0.1),
-                nn.Linear(global_feature_dim, num_classes)
-            )
-        elif use_ori:
-            self.extractor.head = nn.Linear(global_feature_dim, num_classes)
+        if use_ori:
+            if self.only_ori:
+                self.extractor.head = nn.Sequential(
+                    nn.Linear(global_feature_dim, global_feature_dim),
+                    nn.ReLU(),
+                    nn.Dropout(p=0.1),
+                    nn.Linear(global_feature_dim, num_classes)
+                )
+            else:
+                self.extractor.head = nn.Linear(global_feature_dim, num_classes)
 
         print(str(self.extractor))
 
         # fpn module
         if use_fpn:
             for i in range(self.num_layers):
-                # fpn_0: 384  -> 384  -> global_feature_dim
-                # fpn_1: 768  -> 768  -> global_feature_dim
-                # fpn_2: 1536 -> 1536 -> global_feature_dim
-                # fpn_3: 1536 -> 1536 -> global_feature_dim
                 self.add_module("fpn_"+str(i), 
                                 nn.Sequential(
                                     nn.Linear(self.layer_dims[i][1], self.layer_dims[i][1]),
@@ -264,29 +293,25 @@ class SwinVit12(nn.Module):
                                     nn.Linear(self.layer_dims[i][1], global_feature_dim)
                                 ))
 
-                if i != 0:
-                    # i=1 576 != 2304 upsample_1 Conv1d(576, 2304)
-                    # i=2 144 != 576  upsample_2 Conv1d(144, 576)
-                    if self.layer_dims[i][0] != self.layer_dims[i-1][0]:
-                        self.add_module("upsample_"+str(i), 
-                                            nn.Conv1d(self.layer_dims[i][0], self.layer_dims[i-1][0], 1)
-                                        )
+            for i in range(1, self.num_layers):
+                if self.layer_dims[i][0] != self.layer_dims[i-1][0]:
+                    self.add_module("upsample_"+str(i), 
+                                    nn.Conv1d(self.layer_dims[i][0], self.layer_dims[i-1][0], 1))
+        else:
+            for i in range(self.num_layers):
+                self.add_module("proj_l"+str(i),
+                                nn.Conv2d(self.layer_dims[i][1], global_feature_dim, 1))
 
         # mlp classifier (layer classifier module).
         for i in range(self.num_layers):
-
-            if use_layers[i] and not use_fpn:
-                self.add_module("proj_l"+str(i),
-                    nn.Conv2d(self.layer_dims[i][1], global_feature_dim, 1))
-
             if use_layers[i]:
                 self.add_module("classifier_l"+str(i),
-                    nn.Sequential(
-                            nn.Conv2d(global_feature_dim, global_feature_dim, 1),
-                            nn.BatchNorm2d(global_feature_dim),
-                            nn.ReLU(),
-                            nn.Conv2d(global_feature_dim, num_classes, 1)
-                        ))
+                                nn.Sequential(
+                                        nn.Conv2d(global_feature_dim, global_feature_dim, 1),
+                                        nn.BatchNorm2d(global_feature_dim),
+                                        nn.ReLU(),
+                                        nn.Conv2d(global_feature_dim, num_classes, 1)
+                                    ))
 
         if self.use_gcn:
             num_joints = 0 # without global token.
@@ -297,6 +322,14 @@ class SwinVit12(nn.Module):
             self.gcn = GCN(num_joints = num_joints, 
                            in_features = global_feature_dim, 
                            num_classes = num_classes)
+        
+        for i in range(self.num_layers):
+            if use_gcn_fusion[i]:
+                self.add_module("gcn_fusion"+str(i),
+                    GCN_Fusion(in_joints = num_selects[i],
+                               out_joints = num_fusions[i],
+                               in_features = global_feature_dim,)
+                )
 
         self.crossentropy = nn.CrossEntropyLoss()
         self.bce = nn.BCEWithLogitsLoss()
@@ -445,11 +478,8 @@ class SwinVit12(nn.Module):
             layers[-1] = getattr(self, "fpn_"+str(len(layers)-1))(layers[-1])
             for i in range(self.num_layers-1, 0, -1):
                 if self.layer_dims[i][0] != self.layer_dims[i-1][0]:
-                    # i=2 layers[1] = self.fpn_1(layers[1]) + self.upsample_2(layers[2])
-                    # i=1 layers[0] = self.fpn_2(layers[2]) + self.upsample_2(layers[3])
                     layers[i-1] = getattr(self, "fpn_"+str(i-1))(layers[i-1]) + getattr(self, "upsample_"+str(i))(layers[i])
                 else:
-                    # i=3 layers[2] = self.fpn_2(layers[2]) + layers[3]
                     layers[i-1] = getattr(self, "fpn_"+str(i-1))(layers[i-1]) + layers[i]
         
         # layers prediction
@@ -489,12 +519,19 @@ class SwinVit12(nn.Module):
                     # confidences["l"+str(i)+"_selected"] = sc
                 
         # original prediction.
-        
         if self.use_ori:
+            fusioned_features = []
+            for i in range(self.num_layers):
+                if self.use_fusions[i]:
+                    ff = getattr(self, "gcn_fusion"+str(i))(selected_features[i])
+                    fusioned_features.append(ff)
+            fusioned_features = torch.cat(fusioned_features, dim=1) # B, S, C
+            l4 = self.extractor.layers[3](fusioned_features)
+
             if not self.only_ori:
-                B, C, S, S = layers[-1].shape
-                layers[-1] = layers[-1].view(B, C, -1).transpose(1, 2).contiguous()
-            ori_x = self.extractor.norm(layers[-1])  # B L C
+                B, C, S, S = l4.shape
+                l4 = l4.view(B, C, -1).transpose(1, 2).contiguous()
+            ori_x = self.extractor.norm(l4)  # B L C
             ori_x = self.extractor.avgpool(ori_x.transpose(1, 2))  # B C 1
             ori_x = torch.flatten(ori_x, 1)
             logits["ori"] = self.extractor.head(ori_x)
@@ -504,15 +541,8 @@ class SwinVit12(nn.Module):
         # selected prediction.
         if self.use_gcn:
             selected_features = torch.cat(selected_features, dim=1) # B, S, C
-            # selected_features = selected_features.transpose(1, 2).contiguous()
-            # logits["gcn"] = self.gcn(selected_features)
-            # losses["gcn"] = self.crossentropy(logits["gcn"], labels)
-            # accuracys["gcn"] = self._accuracy(logits["gcn"], labels)
-            l4_x = self.extractor.layers[3](selected_features)
-            l4_x = self.extractor.norm(l4_x)
-            l4_x = self.extractor.avgpool(l4_x.transpose(1, 2))
-            l4_x = torch.flatten(l4_x, 1)
-            logits["gcn"] = self.extractor.head(l4_x)
+            selected_features = selected_features.transpose(1, 2).contiguous()
+            logits["gcn"] = self.gcn(selected_features)
             losses["gcn"] = self.crossentropy(logits["gcn"], labels)
             accuracys["gcn"] = self._accuracy(logits["gcn"], labels)
 
