@@ -275,14 +275,18 @@ class SwinVit12(nn.Module):
         
         if use_ori:
             if self.only_ori:
-                self.extractor.head = nn.Sequential(
+                self.extractor.l3_head = nn.Sequential(
                     nn.Linear(global_feature_dim, global_feature_dim),
                     nn.ReLU(),
                     nn.Dropout(p=0.1),
                     nn.Linear(global_feature_dim, num_classes)
                 )
             else:
-                self.extractor.head = nn.Linear(global_feature_dim, num_classes)
+                self.extractor.l3_head = nn.Linear(global_feature_dim, num_classes)
+        
+        if use_gcn_fusions:
+                self.extractor.l4_head = nn.Linear(global_feature_dim, num_classes)
+
 
         print(str(self.extractor))
 
@@ -529,7 +533,7 @@ class SwinVit12(nn.Module):
             ori_x = self.extractor.norm(layers[-1])  # B L C
             ori_x = self.extractor.avgpool(ori_x.transpose(1, 2))  # B C 1
             ori_x = torch.flatten(ori_x, 1)
-            logits["ori"] = self.extractor.head(ori_x)
+            logits["ori"] = self.extractor.l3_head(ori_x)
             losses["ori"] = self.crossentropy(logits["ori"], labels)
             accuracys["ori"] = self._accuracy(logits["ori"], labels)
         
@@ -550,7 +554,7 @@ class SwinVit12(nn.Module):
             l4 = self.extractor.norm(l4)  # B L C
             l4 = self.extractor.avgpool(l4.transpose(1, 2))  # B C 1
             l4 = torch.flatten(l4, 1)
-            logits["fusion"] = self.extractor.head(l4)
+            logits["fusion"] = self.extractor.l4_head(l4)
             losses["fusion"] = self.crossentropy(logits["fusion"], labels)
             accuracys["fusion"] = self._accuracy(logits["fusion"], labels)
 
