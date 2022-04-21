@@ -78,8 +78,8 @@ def set_environment(args):
                 use_layers=args.use_layers,
                 use_selections=args.use_selections,
                 num_selects=args.num_selects,
-                use_gcn_fusions=args.use_gcn_fusions,
-                num_fusions=args.num_fusions,
+                # use_gcn_fusions=args.use_gcn_fusions,
+                # num_fusions=args.num_fusions,
                 global_feature_dim=args.global_feature_dim
             )
 
@@ -249,8 +249,8 @@ def test(args, model, test_loader):
                     batch_logits[name] = torch.softmax(batch_logits[name], dim=-1)
                 elif name in ["gcn"]:
                     batch_logits[name] = torch.softmax(batch_logits[name], dim=-1)
-                elif "fusion" in name:
-                    batch_logits[name] = torch.softmax(batch_logits[name], dim=1)
+                # elif "fusion" in name:
+                #     batch_logits[name] = torch.softmax(batch_logits[name], dim=1)
                 
                 batch_logits[name] = batch_logits[name].cpu()
 

@@ -11,7 +11,7 @@ def get_args():
 
     parser = argparse.ArgumentParser("FineGrained Image Classification Task")
     # save path and dataset information
-    parser.add_argument("--exp_name", default="CUB200#SwinVit@TWCC1-GCN1-005")
+    parser.add_argument("--exp_name", default="CUB200#SwinVit@Only_Ori")
 
     
     if DEV_MODE:
@@ -34,19 +34,19 @@ def get_args():
     parser.add_argument("--optimizer_name", default="sgd", type=str, 
         choices=["sgd", 'adamw'])
     
-    parser.add_argument("--use_fpn", default=True, type=bool)
+    parser.add_argument("--use_fpn", default=False, type=bool)
     parser.add_argument("--use_ori", default=True, type=bool)
-    parser.add_argument("--use_gcn", default=True, type=bool)
+    parser.add_argument("--use_gcn", default=False, type=bool)
     parser.add_argument("--use_layers", 
-        default=[True, True, True], type=list)
+        default=[False, False, False, False], type=list)
     parser.add_argument("--use_selections", 
-        default=[True, True, True], type=list)
+        default=[False, False, False, False], type=list)
     parser.add_argument("--num_selects",
-        default=[2048, 512, 128], type=list)
-    parser.add_argument("--use_gcn_fusions", 
-        default=[True, True, True], type=list)
-    parser.add_argument("--num_fusions", 
-        default=[48, 48, 48], type=list)
+        default=[2048, 512, 128, 32], type=list)
+    # parser.add_argument("--use_gcn_fusions", 
+    #     default=[True, True, True, True], type=list)
+    # parser.add_argument("--num_fusions", 
+    #     default=[48, 48, 48, 48], type=list)
     parser.add_argument("--global_feature_dim", default=1536, type=int)
     
     # loader

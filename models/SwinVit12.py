@@ -226,8 +226,6 @@ class SwinVit12(nn.Module):
                  use_layers: list,
                  use_selections: list,
                  num_selects: list,
-                 use_gcn_fusions: list,
-                 num_fusions: list,
                  global_feature_dim: int = 2048):
         super(SwinVit12, self).__init__()
         """
@@ -257,7 +255,7 @@ class SwinVit12(nn.Module):
         self.check_input(use_layers, use_selections) # layer --> selection
         self.use_layers = use_layers
         self.use_selections = use_selections
-        self.use_gcn_fusions = use_gcn_fusions
+        # self.use_gcn_fusions = use_gcn_fusions
         self.global_feature_dim = global_feature_dim
         self.use_fpn = use_fpn
         self.use_ori = use_ori
@@ -284,8 +282,8 @@ class SwinVit12(nn.Module):
             else:
                 self.extractor.l3_head = nn.Linear(global_feature_dim, num_classes)
         
-        if use_gcn_fusions:
-                self.extractor.l4_head = nn.Linear(global_feature_dim, num_classes)
+        # if use_gcn_fusions:
+        #         self.extractor.l4_head = nn.Linear(global_feature_dim, num_classes)
 
 
         print(str(self.extractor))
@@ -330,13 +328,13 @@ class SwinVit12(nn.Module):
                            in_features = global_feature_dim, 
                            num_classes = num_classes)
         
-        for i in range(self.num_layers):
-            if use_gcn_fusions[i]:
-                self.add_module("gcn_fusion"+str(i),
-                    GCN_Fusion(in_joints = num_selects[i],
-                               out_joints = num_fusions[i],
-                               in_features = global_feature_dim,)
-                )
+        # for i in range(self.num_layers):
+        #     if use_gcn_fusions[i]:
+        #         self.add_module("gcn_fusion"+str(i),
+        #             GCN_Fusion(in_joints = num_selects[i],
+        #                        out_joints = num_fusions[i],
+        #                        in_features = global_feature_dim,)
+        #         )
 
         self.crossentropy = nn.CrossEntropyLoss()
         self.bce = nn.BCEWithLogitsLoss()
@@ -537,26 +535,26 @@ class SwinVit12(nn.Module):
             losses["ori"] = self.crossentropy(logits["ori"], labels)
             accuracys["ori"] = self._accuracy(logits["ori"], labels)
         
-        if self.use_gcn_fusions:
-            fusioned_features = []
-            for i in range(self.num_layers):
-                if self.use_gcn_fusions[i]:
-                    ff = selected_features[i].transpose(1,2).contiguous()
-                    ff = getattr(self, "gcn_fusion"+str(i))(ff)
-                    fusioned_features.append(ff)
-            fusioned_features = torch.cat(fusioned_features, dim=2) # B, S, C
-            fusioned_features = fusioned_features.transpose(1, 2).contiguous()
-            l4 = self.extractor.layers[-1](fusioned_features)
+        # if self.use_gcn_fusions:
+        #     fusioned_features = []
+        #     for i in range(self.num_layers):
+        #         if self.use_gcn_fusions[i]:
+        #             ff = selected_features[i].transpose(1,2).contiguous()
+        #             ff = getattr(self, "gcn_fusion"+str(i))(ff)
+        #             fusioned_features.append(ff)
+        #     fusioned_features = torch.cat(fusioned_features, dim=2) # B, S, C
+        #     fusioned_features = fusioned_features.transpose(1, 2).contiguous()
+        #     l4 = self.extractor.layers[-1](fusioned_features)
 
-            # if not self.only_ori:
-            #     B, C, S, S = l4.shape
-            #     l4 = l4.view(B, C, -1).transpose(1, 2).contiguous()
-            l4 = self.extractor.norm(l4)  # B L C
-            l4 = self.extractor.avgpool(l4.transpose(1, 2))  # B C 1
-            l4 = torch.flatten(l4, 1)
-            logits["fusion"] = self.extractor.l4_head(l4)
-            losses["fusion"] = self.crossentropy(logits["fusion"], labels)
-            accuracys["fusion"] = self._accuracy(logits["fusion"], labels)
+        #     # if not self.only_ori:
+        #     #     B, C, S, S = l4.shape
+        #     #     l4 = l4.view(B, C, -1).transpose(1, 2).contiguous()
+        #     l4 = self.extractor.norm(l4)  # B L C
+        #     l4 = self.extractor.avgpool(l4.transpose(1, 2))  # B C 1
+        #     l4 = torch.flatten(l4, 1)
+        #     logits["fusion"] = self.extractor.l4_head(l4)
+        #     losses["fusion"] = self.crossentropy(logits["fusion"], labels)
+        #     accuracys["fusion"] = self._accuracy(logits["fusion"], labels)
 
         # selected prediction.
         if self.use_gcn:
