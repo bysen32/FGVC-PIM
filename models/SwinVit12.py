@@ -32,7 +32,7 @@ def con_loss(features, labels):
     pos_cos_matrix = 1 - cos_matrix
     neg_cos_matrix = cos_matrix - 0.4
     neg_cos_matrix[neg_cos_matrix < 0] = 0
-    loss = (pos_con_matrix * pos_label_matrix).sum() + (neg_cos_matrix * neg_label_matrix).sum()
+    loss = (pos_cos_matrix * pos_label_matrix).sum() + (neg_cos_matrix * neg_label_matrix).sum()
     loss /= (B * B)
     return loss
 
