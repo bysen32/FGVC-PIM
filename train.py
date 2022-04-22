@@ -75,6 +75,7 @@ def set_environment(args):
                 use_fpn=args.use_fpn, 
                 use_ori=args.use_ori,
                 use_gcn=args.use_gcn,
+                use_contrast=args.use_contrast,
                 use_layers=args.use_layers,
                 use_selections=args.use_selections,
                 num_selects=args.num_selects,
@@ -101,6 +102,7 @@ def set_environment(args):
     save_json(args.save_root + "data_info/train_indexs.json", train_set.data_infos) # save train path and index.
 
     if args.debug_mode:
+        train_sampler = None
         train_loader = torch.utils.data.DataLoader(train_set, num_workers=args.num_workers, batch_size=args.batch_size, shuffle=True)
     else:
         train_sampler = torch.utils.data.distributed.DistributedSampler(train_set, shuffle=True)
@@ -138,7 +140,7 @@ def set_environment(args):
         schedule = np.concatenate((warmup_lr_schedule, schedule))
 
 
-    return train_loader, test_loader, model, optimizer, schedule
+    return train_loader, train_sampler, test_loader, model, optimizer, schedule
 
 
 def train(args, epoch, model, scaler, optimizer, schedules, train_loader, save_distrubution=False):
@@ -410,7 +412,7 @@ if __name__ == "__main__":
                 name=args.exp_name,
                 config=args)
 
-    train_loader, test_loader, model, optimizer, schedule = set_environment(args)
+    train_loader, train_sampler, test_loader, model, optimizer, schedule = set_environment(args)
 
     scaler = torch.cuda.amp.GradScaler()
 
@@ -424,6 +426,9 @@ if __name__ == "__main__":
             save_dist = True
         else:
             save_dist = False
+        
+        if train_sampler:
+            train_sampler.set_epoch(epoch)
         
         """ train model """
         train(args, epoch, model, scaler, optimizer, schedule, train_loader, save_distrubution=save_dist)

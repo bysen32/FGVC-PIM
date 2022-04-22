@@ -37,6 +37,7 @@ def get_args():
     parser.add_argument("--use_fpn", default=False, type=bool)
     parser.add_argument("--use_ori", default=True, type=bool)
     parser.add_argument("--use_gcn", default=False, type=bool)
+    parser.add_argument("--use_contrast", default=True, type=bool)
     parser.add_argument("--use_layers", 
         default=[False, False, False, False], type=list)
     parser.add_argument("--use_selections", 

@@ -23,6 +23,19 @@ def load_model_weights(model, model_path):
             print('could not load layer: {}, not in checkpoint'.format(key))
     return model
 
+def con_loss(features, labels):
+    B, _ = features.shape
+    features = F.normalize(features)
+    cos_matrix = features.mm(features.t())
+    pos_label_matrix = torch.stack([labels == labels[i] for i in range(B)]).float()
+    neg_label_matrix = 1 - pos_label_matrix
+    pos_cos_matrix = 1 - cos_matrix
+    neg_cos_matrix = cos_matrix - 0.4
+    neg_cos_matrix[neg_cos_matrix < 0] = 0
+    loss = (pos_con_matrix * pos_label_matrix).sum() + (neg_cos_matrix * neg_label_matrix).sum()
+    loss /= (B * B)
+    return loss
+
 class GCN_Fusion(nn.Module):
     def __init__(self,
                  in_joints: int,
@@ -223,6 +236,7 @@ class SwinVit12(nn.Module):
                  use_fpn: bool, 
                  use_ori: bool, 
                  use_gcn: bool, 
+                 use_contrast: bool,
                  use_layers: list,
                  use_selections: list,
                  num_selects: list,
@@ -241,8 +255,8 @@ class SwinVit12(nn.Module):
         self.in_size = in_size
         self.layer_dims = [[2304, 384],
                            [576, 768],
-                           [144, 1536],]
-                           #[144, 1536]]
+                           [144, 1536],
+                           [144, 1536]]
 
         self.num_layers = len(self.layer_dims)
         
@@ -256,6 +270,7 @@ class SwinVit12(nn.Module):
         self.use_layers = use_layers
         self.use_selections = use_selections
         # self.use_gcn_fusions = use_gcn_fusions
+        self.use_contrast = use_contrast
         self.global_feature_dim = global_feature_dim
         self.use_fpn = use_fpn
         self.use_ori = use_ori
@@ -273,14 +288,14 @@ class SwinVit12(nn.Module):
         
         if use_ori:
             if self.only_ori:
-                self.extractor.l3_head = nn.Sequential(
+                self.extractor.head = nn.Sequential(
                     nn.Linear(global_feature_dim, global_feature_dim),
                     nn.ReLU(),
                     nn.Dropout(p=0.1),
                     nn.Linear(global_feature_dim, num_classes)
                 )
             else:
-                self.extractor.l3_head = nn.Linear(global_feature_dim, num_classes)
+                self.extractor.head = nn.Linear(global_feature_dim, num_classes)
         
         # if use_gcn_fusions:
         #         self.extractor.l4_head = nn.Linear(global_feature_dim, num_classes)
@@ -531,7 +546,9 @@ class SwinVit12(nn.Module):
             ori_x = self.extractor.norm(layers[-1])  # B L C
             ori_x = self.extractor.avgpool(ori_x.transpose(1, 2))  # B C 1
             ori_x = torch.flatten(ori_x, 1)
-            logits["ori"] = self.extractor.l3_head(ori_x)
+            if self.use_contrast:
+                losses["contrast"] = con_loss(ori_x, labels)
+            logits["ori"] = self.extractor.head(ori_x)
             losses["ori"] = self.crossentropy(logits["ori"], labels)
             accuracys["ori"] = self._accuracy(logits["ori"], labels)
         
