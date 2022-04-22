@@ -25,7 +25,7 @@ def load_model_weights(model, model_path):
 
 def con_loss(features, labels):
     B, _ = features.shape
-    features = F.normalize(features)
+    features = torch.nn.functional.normalize(features)
     cos_matrix = features.mm(features.t())
     pos_label_matrix = torch.stack([labels == labels[i] for i in range(B)]).float()
     neg_label_matrix = 1 - pos_label_matrix
