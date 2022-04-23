@@ -24,7 +24,8 @@ def load_model_weights(model, model_path):
     return model
 
 def con_loss(features, labels):
-    B, _ = features.shape
+    B, C, D = features.shape
+    features = features.view(-1, D)
     features = torch.nn.functional.normalize(features)
     cos_matrix = features.mm(features.t())
     pos_label_matrix = torch.stack([labels == labels[i] for i in range(B)]).float()
@@ -544,10 +545,10 @@ class SwinVit12(nn.Module):
                 B, C, S, S = layers[-1].shape
                 layers[-1] = layers[-1].view(B, C, -1).transpose(1, 2).contiguous()
             ori_x = self.extractor.norm(layers[-1])  # B L C
+            if self.use_contrast:
+                losses["contrast"] = con_loss(ori_x.transpose(1, 2), labels)
             ori_x = self.extractor.avgpool(ori_x.transpose(1, 2))  # B C 1
             ori_x = torch.flatten(ori_x, 1)
-            if self.use_contrast:
-                losses["contrast"] = con_loss(ori_x, labels)
             logits["ori"] = self.extractor.head(ori_x)
             losses["ori"] = self.crossentropy(logits["ori"], labels)
             accuracys["ori"] = self._accuracy(logits["ori"], labels)

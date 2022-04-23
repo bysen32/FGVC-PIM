@@ -103,7 +103,7 @@ def set_environment(args):
 
     if args.debug_mode:
         train_sampler = None
-        train_loader = torch.utils.data.DataLoader(train_set, num_workers=args.num_workers, batch_size=args.batch_size, shuffle=True)
+        train_loader = torch.utils.data.DataLoader(train_set, num_workers=args.num_workers, batch_size=args.batch_size, shuffle=True, pin_memory=True)
     else:
         train_sampler = torch.utils.data.distributed.DistributedSampler(train_set, shuffle=True)
         train_loader = torch.utils.data.DataLoader(train_set, num_workers=args.num_workers, batch_size=args.batch_size, sampler=train_sampler)
