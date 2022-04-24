@@ -10,6 +10,7 @@ import copy
 
 from data.dataset import ImageDataset
 from config import get_args
+from collections import defaultdict
 
 # import apex
 # https://nvidia.github.io/apex/amp.html
@@ -148,6 +149,10 @@ def train(args, epoch, model, scaler, optimizer, schedules, train_loader, save_d
     model.train()
 
     optimizer.zero_grad()
+    total = 0
+    predacc_cnt = defaultdict(int)
+    predloss_cnt = defaultdict(int)
+
     for batch_id, (ids, datas, labels) in enumerate(train_loader):
 
         # adjust learning rate
@@ -157,6 +162,7 @@ def train(args, epoch, model, scaler, optimizer, schedules, train_loader, save_d
         """ data preparation """
         # batch size (full)
         batch_size = labels.size(0)
+        total += batch_size
        
         """ forward """
         if args.debug_mode:
@@ -185,7 +191,11 @@ def train(args, epoch, model, scaler, optimizer, schedules, train_loader, save_d
             scaler.update() # next batch.
             optimizer.zero_grad()
 
-        
+        for name in accuracys:
+            predacc_cnt[name] += accuracys[name] * batch_size
+        for name in losses:
+            predloss_cnt[name] += losses[name] * batch_size
+
         """ log """
         if (batch_id+1) % args.log_freq == 0:
             msg = {
@@ -194,10 +204,10 @@ def train(args, epoch, model, scaler, optimizer, schedules, train_loader, save_d
                 "train_info/lr":get_lr(optimizer)
             }
             for name in accuracys:
-                msg["train_acc/train_acc_"+name] = 100*accuracys[name]
+                msg["train_acc/train_acc_"+name] = 100*predacc_cnt[name]/total
 
             for name in losses:
-                msg["train_loss/train_loss_"+name] = losses[name]
+                msg["train_loss/train_loss_"+name] = predloss_cnt[name]/total
 
             wandb.log(msg)
 
