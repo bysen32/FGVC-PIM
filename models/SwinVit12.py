@@ -544,14 +544,22 @@ class SwinVit12(nn.Module):
                 B, C, S, S = layers[-1].shape
                 layers[-1] = layers[-1].view(B, C, -1).transpose(1, 2).contiguous()
             ori_x = self.extractor.norm(layers[-1])  # B L C
-            if self.use_contrast:
-                B, C, L = ori_x.shape
-                losses["contrast"] = con_loss(ori_x.view(-1, L), labels.repeat(C, 1).transpose(0,1).reshape(-1))
-            ori_x = self.extractor.avgpool(ori_x.transpose(1, 2))  # B C 1
-            ori_x = torch.flatten(ori_x, 1)
-            logits["ori"] = self.extractor.head(ori_x)
-            losses["ori"] = self.crossentropy(logits["ori"], labels)
-            accuracys["ori"] = self._accuracy(logits["ori"], labels)
+            # Contrast Loss
+            # if self.use_contrast:
+            #     B, C, L = ori_x.shape
+            #     losses["contrast"] = con_loss(ori_x.view(-1, L), labels.repeat(C, 1).transpose(0,1).reshape(-1))
+
+            # ori_x = self.extractor.avgpool(ori_x.transpose(1, 2))  # B C 1
+            # ori_x = torch.flatten(ori_x, 1)
+            # logits["ori"] = self.extractor.head(ori_x)
+            # losses["ori"] = self.crossentropy(logits["ori"], labels)
+            # accuracys["ori"] = self._accuracy(logits["ori"], labels)
+
+            B, C, L = ori_x.shape
+            logits["multi_ori"] = self.extractor.head(ori_x.view(-1, L))
+            losses["multi_ori"] = self.crossentropy(logits["multi_ori"], labels.repeat(C, 1).transpose(0,1).reshape(-1))
+            accuracys["multi_ori"] = self._accuracy(logtis["multi_ori"], labels.repeat(C, 1).transpose(0,1).reshape(-1))
+            
         
         # if self.use_gcn_fusions:
         #     fusioned_features = []
