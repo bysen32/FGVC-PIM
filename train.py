@@ -261,6 +261,8 @@ def test(args, model, test_loader):
                     batch_logits[name] = torch.softmax(batch_logits[name], dim=-1)
                 elif name in ["gcn"]:
                     batch_logits[name] = torch.softmax(batch_logits[name], dim=-1)
+                elif "multi_ori" == name:
+                    batch_logits[name] = torch.softmax(batch_logits[name], dim=-1)
                 # elif "fusion" in name:
                 #     batch_logits[name] = torch.softmax(batch_logits[name], dim=1)
                 
@@ -278,6 +280,8 @@ def test(args, model, test_loader):
                 # = = = skip = = =
                 if "select" in name:
                     continue
+                if "multi" in name:
+                    continue
 
                 if logit_sum is None:
                     logit_sum = batch_logits[name]
@@ -290,7 +294,7 @@ def test(args, model, test_loader):
             pred_counter = torch.zeros([batch_size, args.num_classes])
             pred_counter_select = torch.zeros([batch_size, args.num_classes])
             for name in batch_logits:
-                if "selected" in name:
+                if "selected" in name or "multi" in name:
                     """
                     [B, S, C]
                     """
