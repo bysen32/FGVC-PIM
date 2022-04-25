@@ -217,7 +217,7 @@ def train(args, epoch, model, scaler, optimizer, schedules, train_loader, save_d
 def test(args, model, test_loader):
     total = 0
 
-    accuracys = {"sum":0, "vote":0, "vote_select":0}
+    accuracys = {"sum":0, "vote":0, "vote_select":0, "multi_ori":0}
     global_accs_template = {}
     for i in args.test_global_top_confs:
         global_accs_template["global_top"+str(i)] = 0
@@ -288,13 +288,14 @@ def test(args, model, test_loader):
                 else:
                     logit_sum += batch_logits[name]
 
-            accuracys["sum"] += torch.max(logit_sum, dim=-1)[1].eq(labels).sum().item()
+            if logit_sum:
+                accuracys["sum"] += torch.max(logit_sum, dim=-1)[1].eq(labels).sum().item()
 
             # 2. ========= vote =========
             pred_counter = torch.zeros([batch_size, args.num_classes])
             pred_counter_select = torch.zeros([batch_size, args.num_classes])
             for name in batch_logits:
-                if "selected" in name or "multi" in name:
+                if "selected" in name:
                     """
                     [B, S, C]
                     """
@@ -304,6 +305,13 @@ def test(args, model, test_loader):
                         for pred in batch_pred:
                             pred_cls = pred.item()
                             pred_counter_select[bid][pred_cls] += 1
+                elif "multi_ori" in name:
+                    preds = torch.max(batch_logits[name], dim=-1)[1]
+                    for bid in range(batch_size):
+                        batch_pred = preds[bid]
+                        for pred in batch_pred:
+                            pred_cls = pred.item()
+                            pred_counter_multi_ori[bid][pred_cls] += 1
                 else:
                     """
                     [B, C]
@@ -312,13 +320,15 @@ def test(args, model, test_loader):
                     for bid in range(batch_size):
                         pred_cls = preds[bid]
                         pred_counter[bid][pred_cls] += 1
-                        pred_counter_select[bid][pred_cls] += 1
+                        # pred_counter_select[bid][pred_cls] += 1
             
             vote = torch.max(pred_counter, dim=-1)[1]
             vote_select = torch.max(pred_counter_select, dim=-1)[1]
+            vote_multi_ori = torch.max(pred_counter_multi_ori, dim=-1)[1]
 
             accuracys["vote"] += vote.eq(labels).sum().item()
             accuracys["vote_select"] += vote_select.eq(labels).sum().item()
+            accuracys["vote_multi_ori"] += vote_multi_ori.eq(labels).sum().item()
 
             # 3. ========= bigger confidence prediction =========
             # 3.1 === global ===
