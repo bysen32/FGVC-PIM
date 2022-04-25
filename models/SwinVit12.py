@@ -287,15 +287,28 @@ class SwinVit12(nn.Module):
         self.only_ori = use_ori and not (use_fpn or use_gcn)
         
         if use_ori:
-            if self.only_ori:
-                self.extractor.head = nn.Sequential(
-                    nn.Linear(global_feature_dim, global_feature_dim),
-                    nn.ReLU(),
-                    nn.Dropout(p=0.1),
-                    nn.Linear(global_feature_dim, num_classes)
-                )
-            else:
-                self.extractor.head = nn.Linear(global_feature_dim, num_classes)
+            self.extractor.classifier_head = nn.Sequential(
+                nn.Conv2d(global_feature_dim, global_feature_dim, 1),
+                nn.BatchNorm2d(global_feature_dim),
+                nn.ReLU(),
+                nn.Dropout(p=0.1),
+                nn.Conv2d(global_feature_dim, num_classes, 1),
+            )
+            self.extractor.head = nn.Sequential(
+                nn.Linear(global_feature_dim, global_feature_dim),
+                nn.ReLU(),
+                nn.Dropout(p=0.1),
+                nn.Linear(global_feature_dim, num_classes)
+            )
+            # if self.only_ori:
+            #     self.extractor.head = nn.Sequential(
+            #         nn.Linear(global_feature_dim, global_feature_dim),
+            #         nn.ReLU(),
+            #         nn.Dropout(p=0.1),
+            #         nn.Linear(global_feature_dim, num_classes)
+            #     )
+            # else:
+            #     self.extractor.head = nn.Linear(global_feature_dim, num_classes)
         
         # if use_gcn_fusions:
         #         self.extractor.l4_head = nn.Linear(global_feature_dim, num_classes)
@@ -543,23 +556,34 @@ class SwinVit12(nn.Module):
             if not self.only_ori:
                 B, C, S, S = layers[-1].shape
                 layers[-1] = layers[-1].view(B, C, -1).transpose(1, 2).contiguous()
-            ori_x = self.extractor.norm(layers[-1])  # B L C
+            ori_x = self.extractor.norm(layers[-1])  # B C D
+
             # Contrast Loss
             # if self.use_contrast:
             #     B, C, L = ori_x.shape
             #     losses["contrast"] = con_loss(ori_x.view(-1, L), labels.unsqueeze(1).repeat(1, C).flatten())
 
+            # ori
             # ori_x = self.extractor.avgpool(ori_x.transpose(1, 2))  # B C 1
             # ori_x = torch.flatten(ori_x, 1)
             # logits["ori"] = self.extractor.head(ori_x)
             # losses["ori"] = self.crossentropy(logits["ori"], labels)
             # accuracys["ori"] = self._accuracy(logits["ori"], labels)
 
-            logits["multi_ori"] = self.extractor.head(ori_x)
-            B, C, L = logits["multi_ori"].shape
-            losses["multi_ori"] = self.crossentropy(logits["multi_ori"].view(-1, L), labels.unsqueeze(1).repeat(1, C).flatten())
-            accuracys["multi_ori"] = self._accuracy(logits["multi_ori"].view(-1, L), labels.unsqueeze(1).repeat(1, C).flatten())
-
+            # multi ori
+            # logits["multi_ori"] = self.extractor.head(ori_x)
+            # B, C, L = logits["multi_ori"].shape
+            # losses["multi_ori"] = self.crossentropy(logits["multi_ori"].view(-1, L), labels.unsqueeze(1).repeat(1, C).flatten())
+            # accuracys["multi_ori"] = self._accuracy(logits["multi_ori"].view(-1, L), labels.unsqueeze(1).repeat(1, C).flatten())
+            # Conv2d multi ori
+            B, L, C = ori_x.shape
+            S = int(L**0.5)
+            ori_x = orix.transpose(2, 1).contiguous().view(B, C, S, S)
+            logits["multi_ori"] = self.extractor.classifier_head(ori_x)
+            B, C, _, _ = logits["multi_ori"].shape
+            logits["multi_ori"] = logits["multi_ori"].view(B, C, -1).transpose(2, 1).contiguous()
+            losses["multi_ori"] = self.crossentropy(logits["multi_ori"], labels.unsqueeze(1).repeat(1, C).flatten())
+            accuracys["multi_ori"] = self._accuracy(logits["multi_ori"], labels.unsqueeze(1).repeat(1, C).flatten())
         
         # if self.use_gcn_fusions:
         #     fusioned_features = []
