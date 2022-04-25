@@ -217,7 +217,7 @@ def train(args, epoch, model, scaler, optimizer, schedules, train_loader, save_d
 def test(args, model, test_loader):
     total = 0
 
-    accuracys = {"sum":0, "vote":0, "vote_select":0, "multi_ori":0}
+    accuracys = {"sum":0, "vote":0, "vote_select":0, "vote_multi_ori":0}
     global_accs_template = {}
     for i in args.test_global_top_confs:
         global_accs_template["global_top"+str(i)] = 0
@@ -294,6 +294,7 @@ def test(args, model, test_loader):
             # 2. ========= vote =========
             pred_counter = torch.zeros([batch_size, args.num_classes])
             pred_counter_select = torch.zeros([batch_size, args.num_classes])
+            pred_counter_multi_ori = torch.zeros([batch_size, args.num_classes])
             for name in batch_logits:
                 if "selected" in name:
                     """
@@ -332,44 +333,46 @@ def test(args, model, test_loader):
 
             # 3. ========= bigger confidence prediction =========
             # 3.1 === global ===
-            global_confidences = []
-            # global_predictions = []
-            global_features = []
-            for name in batch_logits:
-                if "select" in name:
-                    continue
-                confs, preds = torch.max(batch_logits[name], dim=-1)
-                global_confidences.append(confs.unsqueeze(1))
-                global_features.append(batch_logits[name].unsqueeze(1))
+            # global_confidences = []
+            # # global_predictions = []
+            # global_features = []
+            # for name in batch_logits:
+            #     if "select" in name:
+            #         continue
+            #     if "multi" in name:
+            #         continue
+            #     confs, preds = torch.max(batch_logits[name], dim=-1)
+            #     global_confidences.append(confs.unsqueeze(1))
+            #     global_features.append(batch_logits[name].unsqueeze(1))
 
-            global_confidences = torch.cat(global_confidences, dim=1) # B, S
-            global_features = torch.cat(global_features, dim=1) # B, S, C
+            # global_confidences = torch.cat(global_confidences, dim=1) # B, S
+            # global_features = torch.cat(global_features, dim=1) # B, S, C
 
-            area_size = global_confidences.size(1)
+            # area_size = global_confidences.size(1)
 
-            # tmp variables.
-            tmp_g_accs = copy.deepcopy(global_accs_template)
-            # get batch acuracy
-            for bid in range(batch_size):
-                feature_sum = None
-                ids = torch.sort(global_confidences[bid], dim=-1)[1] # S
-                for i in range(args.test_global_top_confs[-1]):
-                    if i >= ids.size(0):
-                        break
-                    fid = ids[i]
-                    if feature_sum is None:
-                        feature_sum = global_features[bid][fid]
-                    else:
-                        feature_sum += global_features[bid][fid]
+            # # tmp variables.
+            # tmp_g_accs = copy.deepcopy(global_accs_template)
+            # # get batch acuracy
+            # for bid in range(batch_size):
+            #     feature_sum = None
+            #     ids = torch.sort(global_confidences[bid], dim=-1)[1] # S
+            #     for i in range(args.test_global_top_confs[-1]):
+            #         if i >= ids.size(0):
+            #             break
+            #         fid = ids[i]
+            #         if feature_sum is None:
+            #             feature_sum = global_features[bid][fid]
+            #         else:
+            #             feature_sum += global_features[bid][fid]
 
-                    if i in args.test_global_top_confs:
-                        if torch.max(feature_sum, dim=-1)[1] == labels[bid]:
-                            tmp_g_accs["global_top"+str(i)] += 1
+            #         if i in args.test_global_top_confs:
+            #             if torch.max(feature_sum, dim=-1)[1] == labels[bid]:
+            #                 tmp_g_accs["global_top"+str(i)] += 1
 
-            for name in tmp_g_accs:
-                if name not in accuracys:
-                    accuracys[name] = 0
-                accuracys[name] += tmp_g_accs[name]
+            # for name in tmp_g_accs:
+            #     if name not in accuracys:
+            #         accuracys[name] = 0
+            #     accuracys[name] += tmp_g_accs[name]
 
 
             # 3.2 === select ===

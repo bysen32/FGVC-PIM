@@ -555,8 +555,8 @@ class SwinVit12(nn.Module):
             # losses["ori"] = self.crossentropy(logits["ori"], labels)
             # accuracys["ori"] = self._accuracy(logits["ori"], labels)
 
-            B, C, L = ori_x.shape
             logits["multi_ori"] = self.extractor.head(ori_x)
+            B, C, L = logits["multi_ori"].shape
             losses["multi_ori"] = self.crossentropy(logits["multi_ori"].view(-1, L), labels.unsqueeze(1).repeat(1, C).flatten())
             accuracys["multi_ori"] = self._accuracy(logits["multi_ori"].view(-1, L), labels.unsqueeze(1).repeat(1, C).flatten())
 
