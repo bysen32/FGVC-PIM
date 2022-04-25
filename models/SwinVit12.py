@@ -291,7 +291,6 @@ class SwinVit12(nn.Module):
                 nn.Conv2d(global_feature_dim, global_feature_dim, 1),
                 nn.BatchNorm2d(global_feature_dim),
                 nn.ReLU(),
-                nn.Dropout(p=0.1),
                 nn.Conv2d(global_feature_dim, num_classes, 1),
             )
             self.extractor.head = nn.Sequential(
