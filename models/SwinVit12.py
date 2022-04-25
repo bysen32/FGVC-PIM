@@ -582,9 +582,8 @@ class SwinVit12(nn.Module):
             logits["multi_ori"] = self.extractor.classifier_head(ori_x)
             B, C, _, _ = logits["multi_ori"].shape
             logits["multi_ori"] = logits["multi_ori"].view(B, C, -1).transpose(2, 1).contiguous()
-            logits["multi_ori"] = logits["multi_ori"].view(-1, C)
-            losses["multi_ori"] = self.crossentropy(logits["multi_ori"], labels.unsqueeze(1).repeat(1, L).flatten())
-            accuracys["multi_ori"] = self._accuracy(logits["multi_ori"], labels.unsqueeze(1).repeat(1, L).flatten())
+            losses["multi_ori"] = self.crossentropy(logits["multi_ori"].view(-1, C), labels.unsqueeze(1).repeat(1, L).flatten())
+            accuracys["multi_ori"] = self._accuracy(logits["multi_ori"].view(-1, C), labels.unsqueeze(1).repeat(1, L).flatten())
         
         # if self.use_gcn_fusions:
         #     fusioned_features = []
