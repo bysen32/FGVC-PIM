@@ -394,16 +394,24 @@ class SwinVit12(nn.Module):
             _, indices = torch.max(logits[i], dim=-1)
             corrects += (indices == labels[i]).sum().item()
             total += indices.size(0)
-        selected_acc = corrects / total
+        if total:
+            selected_acc = corrects / total
+        else:
+            selected_acc = 0
 
         logits = selected_logits["not_selected"].detach().cpu()
         B = logits.size(0)
         corrects = 0
+        total = 0
         for i in range(B):
             _, indices = torch.max(logits[i], dim=-1)
             corrects += (indices == labels[i]).sum().item()
             total += indices.size(0)
-        not_selected_acc = corrects / total
+        if total:
+            not_selected_acc = corrects / total
+        else:
+            not_selected_acc = 0
+
 
         return [selected_acc, not_selected_acc]
 
