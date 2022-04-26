@@ -432,7 +432,8 @@ class SwinVit12(nn.Module):
         B, S2, C = logits2.size()
         logits2 = logits2.view(-1, C)
         logits2 = self.tanh(logits2)
-        labels2 = torch.zeros([B*S2, C]) - 1
+        # labels2 = torch.zeros([B*S2, C]) - 1
+        labels2 = torch.zeros([B*S2, C])
         labels2 = labels2.to(logits2.device)
         loss2 = 5*self.mseloss(logits2, labels2)
 
@@ -441,23 +442,37 @@ class SwinVit12(nn.Module):
     def _select_features(self, logits, features, num_select):
         # prepare, B, C, H, W --> B, S, C
         selected_logits = {"selected":[], "not_selected":[]}
+
         B, C, H, W = logits.size()
         logits = logits.view(B, C, -1).transpose(2, 1).contiguous()
+
         B, C, H, W = features.size()
         features = features.view(B, C, -1).transpose(2, 1).contiguous()
+
         # measure probabilitys.
         probs = torch.softmax(logits, dim=-1)
         selected_features = []
         selected_confs = []
+        # for bi in range(B):
+        #     max_ids, _ = torch.max(probs[bi], dim=-1)
+        #     confs, ranks = torch.sort(max_ids, descending=True)
+        #     sf = features[bi][ranks[:num_select]]
+        #     nf = features[bi][ranks[num_select:]]  # calculate
+        #     selected_features.append(sf) # [num_selected, C]
+        #     selected_confs.append(confs) # [num_selected]
+
+        #     selected_logits["selected"]    .append(logits[bi][ranks[:num_select]])
+        #     selected_logits["not_selected"].append(logits[bi][ranks[num_select:]])
         for bi in range(B):
             max_ids, _ = torch.max(probs[bi], dim=-1)
             confs, ranks = torch.sort(max_ids, descending=True)
-            sf = features[bi][ranks[:num_select]]
-            nf = features[bi][ranks[num_select:]]  # calculate
-            selected_features.append(sf) # [num_selected, C]
-            selected_confs.append(confs) # [num_selected]
-            selected_logits["selected"].append(logits[bi][ranks[:num_select]])
-            selected_logits["not_selected"].append(logits[bi][ranks[num_select:]])
+            sf = features[bi][ranks[confs > 0.8]]
+            nf = features[bi][ranks[confs < 0.5]]
+            selected_features.append(sf)
+            selected_confs.append(confs)
+
+            selected_logits["selected"]    .append(logits[bi][ranks[confs > 0.8]])
+            selected_logits["not_selected"].append(logits[bi][ranks[confs < 0.5]])
         
         selected_features = torch.stack(selected_features)
         selected_confs = torch.stack(selected_confs)
@@ -562,27 +577,28 @@ class SwinVit12(nn.Module):
             #     B, C, L = ori_x.shape
             #     losses["contrast"] = con_loss(ori_x.view(-1, L), labels.unsqueeze(1).repeat(1, C).flatten())
 
-            # ori
-            # ori_x = self.extractor.avgpool(ori_x.transpose(1, 2))  # B C 1
-            # ori_x = torch.flatten(ori_x, 1)
-            # logits["ori"] = self.extractor.head(ori_x)
-            # losses["ori"] = self.crossentropy(logits["ori"], labels)
-            # accuracys["ori"] = self._accuracy(logits["ori"], labels)
+            # 1. ori
+            ori_x = self.extractor.avgpool(ori_x.transpose(1, 2))  # B C 1
+            ori_x = torch.flatten(ori_x, 1)
+            logits["ori"] = self.extractor.head(ori_x)
+            losses["ori"] = self.crossentropy(logits["ori"], labels)
+            accuracys["ori"] = self._accuracy(logits["ori"], labels)
 
-            # multi ori
+            # 2. multi ori
             # logits["multi_ori"] = self.extractor.head(ori_x)
             # B, C, L = logits["multi_ori"].shape
             # losses["multi_ori"] = self.crossentropy(logits["multi_ori"].view(-1, L), labels.unsqueeze(1).repeat(1, C).flatten())
             # accuracys["multi_ori"] = self._accuracy(logits["multi_ori"].view(-1, L), labels.unsqueeze(1).repeat(1, C).flatten())
-            # Conv2d multi ori
-            B, L, C = ori_x.shape
-            S = int(L**0.5)
-            ori_x = ori_x.transpose(2, 1).contiguous().view(B, C, S, S)
-            logits["multi_ori"] = self.extractor.classifier_head(ori_x)
-            B, C, _, _ = logits["multi_ori"].shape
-            logits["multi_ori"] = logits["multi_ori"].view(B, C, -1).transpose(2, 1).contiguous()
-            losses["multi_ori"] = self.crossentropy(logits["multi_ori"].view(-1, C), labels.unsqueeze(1).repeat(1, L).flatten())
-            accuracys["multi_ori"] = self._accuracy(logits["multi_ori"].view(-1, C), labels.unsqueeze(1).repeat(1, L).flatten())
+
+            # 3. multi ori (conv2d)
+            # B, L, C = ori_x.shape
+            # S = int(L**0.5)
+            # ori_x = ori_x.transpose(2, 1).contiguous().view(B, C, S, S)
+            # logits["multi_ori"] = self.extractor.classifier_head(ori_x)
+            # B, C, _, _ = logits["multi_ori"].shape
+            # logits["multi_ori"] = logits["multi_ori"].view(B, C, -1).transpose(2, 1).contiguous()
+            # losses["multi_ori"] = self.crossentropy(logits["multi_ori"].view(-1, C), labels.unsqueeze(1).repeat(1, L).flatten())
+            # accuracys["multi_ori"] = self._accuracy(logits["multi_ori"].view(-1, C), labels.unsqueeze(1).repeat(1, L).flatten())
         
         # if self.use_gcn_fusions:
         #     fusioned_features = []

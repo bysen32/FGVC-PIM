@@ -11,7 +11,7 @@ def get_args():
 
     parser = argparse.ArgumentParser("FineGrained Image Classification Task")
     # save path and dataset information
-    parser.add_argument("--exp_name", default="CUB200#SwinVit@Multi_Ori(Conv2d)")
+    parser.add_argument("--exp_name", default="CUB200#SwinVit@ori+select")
 
     
     if DEV_MODE:
@@ -34,14 +34,14 @@ def get_args():
     parser.add_argument("--optimizer_name", default="sgd", type=str, 
         choices=["sgd", 'adamw'])
     
-    parser.add_argument("--use_fpn", default=False, type=bool)
+    parser.add_argument("--use_fpn", default=True, type=bool)
     parser.add_argument("--use_ori", default=True, type=bool)
     parser.add_argument("--use_gcn", default=False, type=bool)
     parser.add_argument("--use_contrast", default=True, type=bool)
     parser.add_argument("--use_layers", 
-        default=[False, False, False, False], type=list)
+        default=[True, True, True, True], type=list)
     parser.add_argument("--use_selections", 
-        default=[False, False, False, False], type=list)
+        default=[True, True, True, True], type=list)
     parser.add_argument("--num_selects",
         default=[2048, 512, 128, 32], type=list)
     # parser.add_argument("--use_gcn_fusions", 
