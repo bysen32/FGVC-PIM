@@ -453,26 +453,28 @@ class SwinVit12(nn.Module):
         probs = torch.softmax(logits, dim=-1)
         selected_features = []
         selected_confs = []
-        # for bi in range(B):
-        #     max_ids, _ = torch.max(probs[bi], dim=-1)
-        #     confs, ranks = torch.sort(max_ids, descending=True)
-        #     sf = features[bi][ranks[:num_select]]
-        #     nf = features[bi][ranks[num_select:]]  # calculate
-        #     selected_features.append(sf) # [num_selected, C]
-        #     selected_confs.append(confs) # [num_selected]
-
-        #     selected_logits["selected"]    .append(logits[bi][ranks[:num_select]])
-        #     selected_logits["not_selected"].append(logits[bi][ranks[num_select:]])
         for bi in range(B):
             max_ids, _ = torch.max(probs[bi], dim=-1)
             confs, ranks = torch.sort(max_ids, descending=True)
-            sf = features[bi][ranks[confs > 0.8]]
-            nf = features[bi][ranks[confs < 0.5]]
-            selected_features.append(sf)
-            selected_confs.append(confs)
+            sf = features[bi][ranks[:num_select]]
+            nf = features[bi][ranks[num_select:]]  # calculate
+            selected_features.append(sf) # [num_selected, C]
+            selected_confs.append(confs) # [num_selected]
 
-            selected_logits["selected"]    .append(logits[bi][ranks[confs > 0.8]])
-            selected_logits["not_selected"].append(logits[bi][ranks[confs < 0.5]])
+            selected_logits["selected"]    .append(logits[bi][ranks[:num_select]])
+            selected_logits["not_selected"].append(logits[bi][ranks[num_select:]])
+
+        # Stack Error !
+        # for bi in range(B):
+        #     max_ids, _ = torch.max(probs[bi], dim=-1)
+        #     confs, ranks = torch.sort(max_ids, descending=True)
+        #     sf = features[bi][ranks[confs > 0.8]]
+        #     nf = features[bi][ranks[confs < 0.5]]
+        #     selected_features.append(sf)
+        #     selected_confs.append(confs)
+
+        #     selected_logits["selected"]    .append(logits[bi][ranks[confs > 0.8]])
+        #     selected_logits["not_selected"].append(logits[bi][ranks[confs < 0.5]])
         
         selected_features = torch.stack(selected_features)
         selected_confs = torch.stack(selected_confs)
