@@ -287,27 +287,21 @@ class SwinVit12(nn.Module):
         self.only_ori = use_ori and not (use_fpn or use_gcn)
         
         if use_ori:
-            self.extractor.classifier_head = nn.Sequential(
-                nn.Conv2d(global_feature_dim, global_feature_dim, 1),
-                nn.BatchNorm2d(global_feature_dim),
-                nn.ReLU(),
-                nn.Conv2d(global_feature_dim, num_classes, 1),
-            )
-            self.extractor.head = nn.Sequential(
-                nn.Linear(global_feature_dim, global_feature_dim),
-                nn.ReLU(),
-                nn.Dropout(p=0.1),
-                nn.Linear(global_feature_dim, num_classes)
-            )
-            # if self.only_ori:
-            #     self.extractor.head = nn.Sequential(
-            #         nn.Linear(global_feature_dim, global_feature_dim),
-            #         nn.ReLU(),
-            #         nn.Dropout(p=0.1),
-            #         nn.Linear(global_feature_dim, num_classes)
-            #     )
-            # else:
-            #     self.extractor.head = nn.Linear(global_feature_dim, num_classes)
+            # self.extractor.classifier_head = nn.Sequential(
+            #     nn.Conv2d(global_feature_dim, global_feature_dim, 1),
+            #     nn.BatchNorm2d(global_feature_dim),
+            #     nn.ReLU(),
+            #     nn.Conv2d(global_feature_dim, num_classes, 1),
+            # )
+            if self.only_ori:
+                self.extractor.head = nn.Sequential(
+                    nn.Linear(global_feature_dim, global_feature_dim),
+                    nn.ReLU(),
+                    nn.Dropout(p=0.1),
+                    nn.Linear(global_feature_dim, num_classes)
+                )
+            else:
+                self.extractor.head = nn.Linear(global_feature_dim, num_classes)
         
         # if use_gcn_fusions:
         #         self.extractor.l4_head = nn.Linear(global_feature_dim, num_classes)
@@ -329,10 +323,6 @@ class SwinVit12(nn.Module):
                 if self.layer_dims[i][0] != self.layer_dims[i-1][0]:
                     self.add_module("upsample_"+str(i), 
                                     nn.Conv1d(self.layer_dims[i][0], self.layer_dims[i-1][0], 1))
-        else:
-            for i in range(self.num_layers):
-                self.add_module("proj_l"+str(i),
-                                nn.Conv2d(self.layer_dims[i][1], global_feature_dim, 1))
 
         # mlp classifier (layer classifier module).
         for i in range(self.num_layers):
@@ -344,6 +334,11 @@ class SwinVit12(nn.Module):
                                         nn.ReLU(),
                                         nn.Conv2d(global_feature_dim, num_classes, 1)
                                     ))
+                
+                if not use_fpn:
+                    for i in range(self.num_layers):
+                        self.add_module("proj_l"+str(i),
+                                        nn.Conv2d(self.layer_dims[i][1], global_feature_dim, 1))
 
         if self.use_gcn:
             num_joints = 0 # without global token.
@@ -440,8 +435,8 @@ class SwinVit12(nn.Module):
         B, S2, C = logits2.size()
         logits2 = logits2.view(-1, C)
         logits2 = self.tanh(logits2)
-        # labels2 = torch.zeros([B*S2, C]) - 1
-        labels2 = torch.zeros([B*S2, C])
+        labels2 = torch.zeros([B*S2, C]) - 1
+        # labels2 = torch.zeros([B*S2, C])
         labels2 = labels2.to(logits2.device)
         loss2 = 5*self.mseloss(logits2, labels2)
 
