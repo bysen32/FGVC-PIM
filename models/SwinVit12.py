@@ -278,8 +278,9 @@ class SwinVit12(nn.Module):
 
         # create features extractor
         # test1 'swin_large_patch4_window12_384_in22k'
+        # self.extractor = timm.create_model('swin_large_patch4_window12_384_in22k', pretrained=True)
         # test2 'swin_large_patch4_window7_224_in22k'
-        self.extractor = timm.create_model('swin_large_patch4_window12_384_in22k', pretrained=True)
+        self.extractor = timm.create_model('swin_large_patch4_window7_224_in22k', pretrained=True)
         # self.extractor = load_model_weights(self.extractor, "./models/vit_base_patch16_224_miil_21k.pth")
         # with open("structure.txt", "w") as ftxt:
         #     ftxt.write(str(self.extractor))
