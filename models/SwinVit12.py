@@ -579,9 +579,9 @@ class SwinVit12(nn.Module):
             ori_x = self.extractor.norm(layers[-1])  # B C D
 
             # Contrast Loss
-            # if self.use_contrast:
-            #     B, C, L = ori_x.shape
-            #     losses["contrast"] = con_loss(ori_x.view(-1, L), labels.unsqueeze(1).repeat(1, C).flatten())
+            if self.use_contrast:
+                B, C, L = ori_x.shape
+                losses["contrast"] = con_loss(ori_x.view(-1, L), labels.unsqueeze(1).repeat(1, C).flatten())
 
             # 1. ori
             ori_x = self.extractor.avgpool(ori_x.transpose(1, 2))  # B C 1

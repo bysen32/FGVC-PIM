@@ -11,7 +11,7 @@ def get_args():
 
     parser = argparse.ArgumentParser("FineGrained Image Classification Task")
     # save path and dataset information
-    parser.add_argument("--exp_name", default="CUB200#SwinVit@onlyori224")
+    parser.add_argument("--exp_name", default="CUB200#SwinVit@ori224+contrast")
 
     
     if DEV_MODE:
@@ -37,7 +37,7 @@ def get_args():
     parser.add_argument("--use_fpn", default=False, type=bool)
     parser.add_argument("--use_ori", default=True, type=bool)
     parser.add_argument("--use_gcn", default=False, type=bool)
-    parser.add_argument("--use_contrast", default=False, type=bool)
+    parser.add_argument("--use_contrast", default=True, type=bool)
 
     parser.add_argument("--use_layers", 
         default=[False, False, False, False], type=list)
