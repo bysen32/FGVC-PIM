@@ -288,8 +288,7 @@ def test(args, model, test_loader):
                 else:
                     logit_sum += batch_logits[name]
 
-            if logit_sum:
-                accuracys["sum"] += torch.max(logit_sum, dim=-1)[1].eq(labels).sum().item()
+            accuracys["sum"] += torch.max(logit_sum, dim=-1)[1].eq(labels).sum().item()
 
             # 2. ========= vote =========
             pred_counter = torch.zeros([batch_size, args.num_classes])
@@ -482,16 +481,16 @@ if __name__ == "__main__":
                 best_acc = test_acc
                 wandb.run.summary["best_accuracy"] = best_acc # upload to wandb
                 wandb.run.summary["best_epoch"] = epoch+1 # upload to wandb
-                if os.path.isfile(args.save_root + "backup/best.pth"):
-                    try:
-                        os.remove(args.save_root + "backup/best.pth")
-                    except print(0):
-                        pass
-                torch.save(save_dict, args.save_root + "backup/best.pth")
+                # if os.path.isfile(args.save_root + "backup/best.pth"):
+                #     try:
+                #         os.remove(args.save_root + "backup/best.pth")
+                #     except print(0):
+                #         pass
+                # torch.save(save_dict, args.save_root + "backup/best.pth")
 
         # save to last.pt
-        if os.path.isfile(args.save_root + "backup/last.pth"):
-            try:
-                os.remove(args.save_root + "backup/last.pth")
-            except print(0):
-                pass
+        # if os.path.isfile(args.save_root + "backup/last.pth"):
+        #     try:
+        #         os.remove(args.save_root + "backup/last.pth")
+        #     except print(0):
+        #         pass
