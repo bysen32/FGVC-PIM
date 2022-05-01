@@ -294,6 +294,11 @@ class SwinVit12(nn.Module):
             #     nn.ReLU(),
             #     nn.Conv2d(global_feature_dim, num_classes, 1),
             # )
+
+            self.extractor.classifier_head = nn.Sequential(
+                nn.Conv2d(49, 1, 1),
+            )
+
             if self.only_ori:
                 self.extractor.head = nn.Sequential(
                     nn.Linear(global_feature_dim, global_feature_dim),
@@ -583,12 +588,12 @@ class SwinVit12(nn.Module):
                 B, C, L = ori_x.shape
                 losses["contrast"] = con_loss(ori_x.view(-1, L), labels.unsqueeze(1).repeat(1, C).flatten())
 
-            # 1. ori
-            ori_x = self.extractor.avgpool(ori_x.transpose(1, 2))  # B C 1
-            ori_x = torch.flatten(ori_x, 1)
-            logits["ori"] = self.extractor.head(ori_x)
-            losses["ori"] = self.crossentropy(logits["ori"], labels)
-            accuracys["ori"] = self._accuracy(logits["ori"], labels)
+            # 1. only_ori
+            # ori_x = self.extractor.avgpool(ori_x.transpose(1, 2))  # B C 1
+            # ori_x = torch.flatten(ori_x, 1)
+            # logits["ori"] = self.extractor.head(ori_x)
+            # losses["ori"] = self.crossentropy(logits["ori"], labels)
+            # accuracys["ori"] = self._accuracy(logits["ori"], labels)
 
             # 2. multi ori
             # logits["multi_ori"] = self.extractor.head(ori_x)
@@ -605,6 +610,16 @@ class SwinVit12(nn.Module):
             # logits["multi_ori"] = logits["multi_ori"].view(B, C, -1).transpose(2, 1).contiguous()
             # losses["multi_ori"] = self.crossentropy(logits["multi_ori"].view(-1, C), labels.unsqueeze(1).repeat(1, L).flatten())
             # accuracys["multi_ori"] = self._accuracy(logits["multi_ori"].view(-1, C), labels.unsqueeze(1).repeat(1, L).flatten())
+
+            # 4. 224x224: 49 -> 1
+            B, L, C = ori_x.shape
+            ori_x = ori_x.view(B, L, C, 1)
+            ori_x = self.extractor.classifier_head(ori_x)
+            ori_x = ori_x.view(B, -1)
+            # ori_x = torch.flatten(ori_x, 1)
+            logits["ori"] = self.extractor.head(ori_x)
+            losses["ori"] = self.crossentropy(logits["ori"], labels)
+            accuracys["ori"] = self._accuracy(logits["ori"], labels)
         
         # if self.use_gcn_fusions:
         #     fusioned_features = []
