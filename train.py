@@ -163,7 +163,7 @@ def train(args, epoch, model, scaler, optimizer, schedules, train_loader, save_d
         # batch size (full)
         batch_size = labels.size(0)
         total += batch_size
-       
+        
         """ forward """
         if args.debug_mode:
             datas, labels = datas.to(args.device), labels.to(args.device)
@@ -196,11 +196,12 @@ def train(args, epoch, model, scaler, optimizer, schedules, train_loader, save_d
         for name in losses:
             predloss_cnt[name] += losses[name] * batch_size
 
+
         """ log """
         if (batch_id+1) % args.log_freq == 0:
             msg = {
-                "train_info/epoch":epoch+1,
                 "train_loss/loss":loss,
+                "train_info/epoch":epoch+1,
                 "train_info/lr":get_lr(optimizer)
             }
             for name in accuracys:
@@ -208,10 +209,8 @@ def train(args, epoch, model, scaler, optimizer, schedules, train_loader, save_d
 
             for name in losses:
                 msg["train_loss/train_loss_"+name] = predloss_cnt[name]/total
-
+            
             wandb.log(msg)
-
-        
 
 
 def test(args, model, test_loader):
