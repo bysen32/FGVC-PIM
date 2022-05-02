@@ -370,10 +370,16 @@ class SwinVit12(nn.Module):
         """
         # BNC
         self.in_size = in_size
-        self.layer_dims = [[2304, 384],
-                           [576, 768],
-                           [144, 1536],
-                           [144, 1536]]
+        # 384
+        # self.layer_dims = [[2304, 384],
+        #                    [576, 768],
+        #                    [144, 1536],
+        #                    [144, 1536]]
+        # 224
+        self.layer_dims = [[784, 384],
+                           [196, 768],
+                           [49, 1536],
+                           [49, 1536]]
 
         self.num_layers = len(self.layer_dims)
         
@@ -395,8 +401,9 @@ class SwinVit12(nn.Module):
 
         # create features extractor
         # test1 'swin_large_patch4_window12_384_in22k'
+        # self.extractor = timm.create_model('swin_large_patch4_window12_384_in22k', pretrained=True)
         # test2 'swin_large_patch4_window7_224_in22k'
-        self.extractor = timm.create_model('swin_large_patch4_window12_384_in22k', pretrained=True)
+        self.extractor = timm.create_model('swin_large_patch4_window7_224_in22k', pretrained=True)
         # self.extractor = load_model_weights(self.extractor, "./models/vit_base_patch16_224_miil_21k.pth")
         # with open("structure.txt", "w") as ftxt:
         #     ftxt.write(str(self.extractor))
@@ -410,6 +417,7 @@ class SwinVit12(nn.Module):
             #     nn.ReLU(),
             #     nn.Conv2d(global_feature_dim, num_classes, 1),
             # )
+
             if self.only_ori:
                 self.extractor.head = nn.Sequential(
                     nn.Linear(global_feature_dim, global_feature_dim),
@@ -695,11 +703,11 @@ class SwinVit12(nn.Module):
             ori_x = self.extractor.norm(layers[-1])  # B C D
 
             # Contrast Loss
-            # if self.use_contrast:
-            #     B, C, L = ori_x.shape
-            #     losses["contrast"] = con_loss(ori_x.view(-1, L), labels.unsqueeze(1).repeat(1, C).flatten())
+            if self.use_contrast:
+                B, C, L = ori_x.shape
+                losses["contrast"] = con_loss(ori_x.view(-1, L), labels.unsqueeze(1).repeat(1, C).flatten())
 
-            # 1. ori
+            # 1. only_ori
             ori_x = self.extractor.avgpool(ori_x.transpose(1, 2))  # B C 1
             ori_x = torch.flatten(ori_x, 1)
             logits["ori"] = self.extractor.head(ori_x)
@@ -721,7 +729,7 @@ class SwinVit12(nn.Module):
             # logits["multi_ori"] = logits["multi_ori"].view(B, C, -1).transpose(2, 1).contiguous()
             # losses["multi_ori"] = self.crossentropy(logits["multi_ori"].view(-1, C), labels.unsqueeze(1).repeat(1, L).flatten())
             # accuracys["multi_ori"] = self._accuracy(logits["multi_ori"].view(-1, C), labels.unsqueeze(1).repeat(1, L).flatten())
-        
+
         # if self.use_gcn_fusions:
         #     fusioned_features = []
         #     for i in range(self.num_layers):
