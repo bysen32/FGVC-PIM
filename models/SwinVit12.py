@@ -74,7 +74,7 @@ class Block(nn.Module):
         self.drop_path = DropPath(drop_path) if drop_path > 0. else nn.Identity()
         self.norm2 = norm_layer(dim)
         mlp_hidden_dim = int(dim * mlp_ratio)
-        self.mlp = Mlp(in_deatures=dim, hidden_features=mlp_hidden_dim, act_layer=act_layer, drop=drop)
+        self.mlp = Mlp(in_features=dim, hidden_features=mlp_hidden_dim, act_layer=act_layer, drop=drop)
     
     def forward(self, x):
         x = x + self.drop_path(self.attn(self.norm1(x)))
@@ -269,8 +269,10 @@ class GCNTest(nn.Module):
 
     def forward(self, x):
         x = self.pool1(x)
+        x = x.transpose(2, 1).contiguous()
         x = self.transblock(x)
 
+        x = x.transpose(2, 1).contiguous()
         x = self.pool2(x)
         x = self.dropout(x)
         x = x.flatten(1)
