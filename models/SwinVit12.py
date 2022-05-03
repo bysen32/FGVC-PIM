@@ -258,7 +258,7 @@ class GCNTest(nn.Module):
                  use_global_token: bool = False):
         super(GCNTest, self).__init__()
 
-        # self.pool1 = nn.Linear(num_joints, num_joints//32)
+        self.pool1 = nn.Linear(num_joints, num_joints//32)
 
         self.transblock = Block(in_features, num_heads=8)
 
@@ -269,7 +269,7 @@ class GCNTest(nn.Module):
         self.tanh = nn.Tanh()
 
     def forward(self, x):
-        # x = self.pool1(x)
+        x = self.pool1(x)
         x = x.transpose(2, 1).contiguous()
         x = self.transblock(x)
 
