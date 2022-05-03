@@ -41,12 +41,12 @@ class Attention(nn.Module):
         super(Attention, self).__init__()
 
         self.num_heads = num_heads
-        head_dim = (dim // 32) // num_heads
+        head_dim = dim // num_heads
         self.scale = head_dim ** -0.5
 
-        self.qkv = nn.Linear(dim, (dim //32) * 3, bias=qkv_bias)
+        self.qkv = nn.Linear(dim, dim * 3, bias=qkv_bias)
         self.attn_drop = nn.Dropout(attn_drop)
-        self.proj = nn.Linear(dim//32, dim//32)
+        self.proj = nn.Linear(dim, dim)
         self.proj_drop = nn.Dropout(proj_drop)
 
     def forward(self, x):
@@ -262,8 +262,9 @@ class GCNTest(nn.Module):
 
         self.transblock = Block(in_features, num_heads=8)
 
-        self.pool2 = nn.Linear(num_joints//32, 1)
-        self.dropout = nn.Dropout(p=0.1)
+        # self.pool2 = nn.Linear(num_joints, 1)
+        # self.dropout = nn.Dropout(p=0.1)
+        self.avgpool = nn.AdaptiveAvgPool1d((1))
         self.classifier = nn.Linear(in_features, num_classes)
         self.tanh = nn.Tanh()
 
@@ -273,8 +274,8 @@ class GCNTest(nn.Module):
         x = self.transblock(x)
 
         x = x.transpose(2, 1).contiguous()
-        x = self.pool2(x)
-        x = self.dropout(x)
+        x = self.avgpool(x)
+        # x = self.dropout(x)
         x = x.flatten(1)
         x = self.classifier(x)
 
