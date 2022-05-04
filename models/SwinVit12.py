@@ -258,11 +258,12 @@ class GCNTest(nn.Module):
                  use_global_token: bool = False):
         super(GCNTest, self).__init__()
 
-        self.pool1 = nn.Linear(num_joints, num_joints//32)
+        self.scale = int(num_joints ** 0.5)
+        self.pool1 = nn.Linear(num_joints, num_joints // self.scale)
 
         self.transblock = Block(in_features, num_heads=8)
 
-        # self.pool2 = nn.Linear(num_joints, 1)
+        # self.pool2 = nn.Linear(num_joints // self.scale, 1)
         # self.dropout = nn.Dropout(p=0.1)
         self.avgpool = nn.AdaptiveAvgPool1d((1))
         self.classifier = nn.Linear(in_features, num_classes)
@@ -404,9 +405,9 @@ class SwinVit12(nn.Module):
 
         # create features extractor
         # test1 'swin_large_patch4_window12_384_in22k'
-        # self.extractor = timm.create_model('swin_large_patch4_window12_384_in22k', pretrained=True)
+        self.extractor = timm.create_model('swin_large_patch4_window12_384_in22k', pretrained=True)
         # test2 'swin_large_patch4_window7_224_in22k'
-        self.extractor = timm.create_model('swin_large_patch4_window7_224_in22k', pretrained=True)
+        # self.extractor = timm.create_model('swin_large_patch4_window7_224_in22k', pretrained=True)
         # self.extractor = load_model_weights(self.extractor, "./models/vit_base_patch16_224_miil_21k.pth")
         # with open("structure.txt", "w") as ftxt:
         #     ftxt.write(str(self.extractor))
