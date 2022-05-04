@@ -701,7 +701,7 @@ class SwinVit12(nn.Module):
 
         # original prediction.
         if self.use_ori:
-            if not self.only_ori:
+            if self.only_ori:
                 B, C, S, S = layers[-1].shape
                 layers[-1] = layers[-1].view(B, C, -1).transpose(1, 2).contiguous()
             ori_x = self.extractor.norm(layers[-1])  # B C D
