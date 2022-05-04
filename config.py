@@ -40,9 +40,9 @@ def get_args():
     parser.add_argument("--use_contrast", default=False, type=bool)
 
     parser.add_argument("--use_layers", 
-        default=[True, True, True, True], type=list)
+        default=[False, False, False, False], type=list)
     parser.add_argument("--use_selections", 
-        default=[True, True, True, True], type=list)
+        default=[False, False, False, False], type=list)
     # 384
     parser.add_argument("--num_selects",
         default=[2048, 512, 128, 32], type=list)
