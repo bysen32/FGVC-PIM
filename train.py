@@ -403,13 +403,13 @@ def test(args, model, test_loader):
     for name in accuracys:
         msg["test_acc/test_acc_"+name] = 100*accuracys[name]/total
     
-    for name in logs:
-        msg["test_logs/"+name] = logs[name]
-
     best_acc = -1
     for name in msg:
         if msg[name]>best_acc:
             best_acc = msg[name]
+
+    for name in logs:
+        msg["test_logs/"+name] = logs[name]
 
     wandb.log(msg)
 
