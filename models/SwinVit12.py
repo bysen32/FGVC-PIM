@@ -375,15 +375,15 @@ class SwinVit12(nn.Module):
         # BNC
         self.in_size = in_size
         # 384
-        # self.layer_dims = [[2304, 384],
-        #                    [576, 768],
-        #                    [144, 1536],
-        #                    [144, 1536]]
+        self.layer_dims = [[2304, 384],
+                           [576, 768],
+                           [144, 1536],
+                           [144, 1536]]
         # 224
-        self.layer_dims = [[784, 384],
-                           [196, 768],
-                           [49, 1536],
-                           [49, 1536]]
+        # self.layer_dims = [[784, 384],
+        #                    [196, 768],
+        #                    [49, 1536],
+        #                    [49, 1536]]
 
         self.num_layers = len(self.layer_dims)
         
