@@ -407,6 +407,7 @@ def test(args, model, test_loader):
     for name in msg:
         if msg[name]>best_acc:
             best_acc = msg[name]
+    msg["test_acc/best_acc"] = best_acc
 
     for name in logs:
         msg["test_logs/"+name] = logs[name]
