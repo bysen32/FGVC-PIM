@@ -34,8 +34,16 @@ def set_environment(args):
             )
 
     checkpoint = torch.load(args.pretrained_path)
+    if args.debug_mode:
+        model.to(args.device)
+    else:
+        torch.distributed.init_process_group(backend='nccl')
+        torch.cuda.set_device(args.local_rank)
+        model.cuda(args.local_rank)
+        model = torch.nn.parallel.DistributedDataParallel(model, device_ids = [args.local_rank])
+
+
     model.load_state_dict(checkpoint['model'])
-    model.to(args.device)
 
     # convert image to tensor
     img_transforms = transforms.Compose([
@@ -120,8 +128,12 @@ def main(args, img, model):
     cv2.namedWindow('heatmap', 0)
     cv2.imshow('heatmap', plt_img)
     save_path = args.img_path.replace('.'+args.img_path.split('.')[-1], "") + \
-        "_heat.jpg"
+        "_onlyori_heat.jpg"
     cv2.imwrite(save_path, plt_img)
+    raw_path = args.img_path.replace('.'+args.img_path.split('.')[-1], "") + \
+        "_raw.jpg"
+    cv2.imwrite(raw_path, rgb_img)
+
     cv2.waitKey(0)
 
 
