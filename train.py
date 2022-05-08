@@ -171,7 +171,7 @@ def train(args, epoch, model, scaler, optimizer, schedules, train_loader, save_d
             datas, labels = datas.cuda(args.local_rank), labels.cuda(args.local_rank)
         
         with torch.cuda.amp.autocast():
-            losses, accuracys = model(datas, labels)
+            losses, accuracys, logs = model(datas, labels)
             
             loss = 0
             for name in losses:
@@ -210,13 +210,16 @@ def train(args, epoch, model, scaler, optimizer, schedules, train_loader, save_d
             for name in losses:
                 msg["train_loss/train_loss_"+name] = predloss_cnt[name]/total
             
+            for name in logs:
+                msg["train_logs/"+name] = logs[name]
+            
             wandb.log(msg)
 
 
 def test(args, model, test_loader):
     total = 0
 
-    accuracys = {"sum":0, "vote":0, "vote_select":0, "vote_multi_ori":0}
+    accuracys = {"sum":0, "vote":0, "vote_select":0}
     global_accs_template = {}
     for i in args.test_global_top_confs:
         global_accs_template["global_top"+str(i)] = 0
@@ -239,7 +242,7 @@ def test(args, model, test_loader):
                 datas, labels = datas.cuda(args.local_rank), labels.cuda(args.local_rank)
 
             """ forward """
-            _, batch_accs, batch_logits = model(datas, labels, return_preds=True)
+            _, batch_accs, batch_logits, logs = model(datas, labels, return_preds=True)
             
             for name in batch_accs:
                 store_name = name
@@ -256,14 +259,10 @@ def test(args, model, test_loader):
                     batch_logits[name] = torch.softmax(batch_logits[name], dim=1)
                 elif "l_" in name:
                     batch_logits[name] = torch.softmax(batch_logits[name].mean(2).mean(2), dim=-1)
-                elif "select" in name:
-                    batch_logits[name] = torch.softmax(batch_logits[name], dim=-1)
                 elif name in ["gcn"]:
                     batch_logits[name] = torch.softmax(batch_logits[name], dim=-1)
-                elif "multi_ori" == name:
+                elif "select" in name:
                     batch_logits[name] = torch.softmax(batch_logits[name], dim=-1)
-                # elif "fusion" in name:
-                #     batch_logits[name] = torch.softmax(batch_logits[name], dim=1)
                 
                 batch_logits[name] = batch_logits[name].cpu()
 
@@ -279,8 +278,6 @@ def test(args, model, test_loader):
                 # = = = skip = = =
                 if "select" in name:
                     continue
-                if "multi" in name:
-                    continue
 
                 if logit_sum is None:
                     logit_sum = batch_logits[name]
@@ -292,7 +289,6 @@ def test(args, model, test_loader):
             # 2. ========= vote =========
             pred_counter = torch.zeros([batch_size, args.num_classes])
             pred_counter_select = torch.zeros([batch_size, args.num_classes])
-            pred_counter_multi_ori = torch.zeros([batch_size, args.num_classes])
             for name in batch_logits:
                 if "selected" in name:
                     """
@@ -304,13 +300,6 @@ def test(args, model, test_loader):
                         for pred in batch_pred:
                             pred_cls = pred.item()
                             pred_counter_select[bid][pred_cls] += 1
-                elif "multi_ori" in name:
-                    preds = torch.max(batch_logits[name], dim=-1)[1]
-                    for bid in range(batch_size):
-                        batch_pred = preds[bid]
-                        for pred in batch_pred:
-                            pred_cls = pred.item()
-                            pred_counter_multi_ori[bid][pred_cls] += 1
                 else:
                     """
                     [B, C]
@@ -323,11 +312,9 @@ def test(args, model, test_loader):
             
             vote = torch.max(pred_counter, dim=-1)[1]
             vote_select = torch.max(pred_counter_select, dim=-1)[1]
-            vote_multi_ori = torch.max(pred_counter_multi_ori, dim=-1)[1]
 
             accuracys["vote"] += vote.eq(labels).sum().item()
             accuracys["vote_select"] += vote_select.eq(labels).sum().item()
-            accuracys["vote_multi_ori"] += vote_multi_ori.eq(labels).sum().item()
 
             # 3. ========= bigger confidence prediction =========
             # 3.1 === global ===
@@ -336,8 +323,6 @@ def test(args, model, test_loader):
             global_features = []
             for name in batch_logits:
                 if "select" in name:
-                    continue
-                if "multi" in name:
                     continue
                 confs, preds = torch.max(batch_logits[name], dim=-1)
                 global_confidences.append(confs.unsqueeze(1))
@@ -417,6 +402,9 @@ def test(args, model, test_loader):
     msg = {}
     for name in accuracys:
         msg["test_acc/test_acc_"+name] = 100*accuracys[name]/total
+    
+    for name in logs:
+        msg["test_logs/"+name] = logs[name]
 
     best_acc = -1
     for name in msg:

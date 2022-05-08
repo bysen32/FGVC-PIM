@@ -11,7 +11,7 @@ def get_args():
 
     parser = argparse.ArgumentParser("FineGrained Image Classification Task")
     # save path and dataset information
-    parser.add_argument("--exp_name", default="CUB200#SwinVit@ori384+contrast+ff")
+    parser.add_argument("--exp_name", default="CUB200#SwinVit@ori224+newselect")
 
     
     if DEV_MODE:
@@ -24,7 +24,7 @@ def get_args():
     parser.add_argument("--debug_mode", default=DEBUG_MODE, type=bool)
     
 
-    parser.add_argument("--data_size", default=384, type=int)
+    parser.add_argument("--data_size", default=224, type=int)
     parser.add_argument("--num_rows", default=0, type=int)
     parser.add_argument("--num_cols", default=0, type=int)
     parser.add_argument("--sub_data_size", default=32, type=int)
@@ -36,19 +36,20 @@ def get_args():
     
     parser.add_argument("--use_fpn", default=True, type=bool)
     parser.add_argument("--use_ori", default=True, type=bool)
-    parser.add_argument("--use_gcn", default=True, type=bool)
-    parser.add_argument("--use_contrast", default=True, type=bool)
+    parser.add_argument("--use_gcn", default=False, type=bool)
+    parser.add_argument("--use_contrast", default=False, type=bool)
 
     parser.add_argument("--use_layers", 
         default=[True, True, True, True], type=list)
     parser.add_argument("--use_selections", 
         default=[True, True, True, True], type=list)
     # 384
-    parser.add_argument("--num_selects",
-        default=[2048, 512, 128, 32], type=list)
-    # 224
     # parser.add_argument("--num_selects",
-    #     default=[784, 196, 49, 49], type=list)
+    #     default=[2048, 512, 128, 32], type=list)
+    # 224
+    parser.add_argument("--num_selects",
+        default=[784, 196, 49, 49], type=list)
+    # 以下两项 暂不使用
     # parser.add_argument("--use_gcn_fusions", 
     #     default=[True, True, True, True], type=list)
     # parser.add_argument("--num_fusions", 

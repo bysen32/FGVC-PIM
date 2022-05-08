@@ -375,15 +375,15 @@ class SwinVit12(nn.Module):
         # BNC
         self.in_size = in_size
         # 384
-        self.layer_dims = [[2304, 384],
-                           [576, 768],
-                           [144, 1536],
-                           [144, 1536]]
+        # self.layer_dims = [[2304, 384],
+        #                    [576, 768],
+        #                    [144, 1536],
+        #                    [144, 1536]]
         # 224
-        # self.layer_dims = [[784, 384],
-        #                    [196, 768],
-        #                    [49, 1536],
-        #                    [49, 1536]]
+        self.layer_dims = [[784, 384],
+                           [196, 768],
+                           [49, 1536],
+                           [49, 1536]]
 
         self.num_layers = len(self.layer_dims)
         
@@ -405,9 +405,9 @@ class SwinVit12(nn.Module):
 
         # create features extractor
         # test1 'swin_large_patch4_window12_384_in22k'
-        self.extractor = timm.create_model('swin_large_patch4_window12_384_in22k', pretrained=True)
+        # self.extractor = timm.create_model('swin_large_patch4_window12_384_in22k', pretrained=True)
         # test2 'swin_large_patch4_window7_224_in22k'
-        # self.extractor = timm.create_model('swin_large_patch4_window7_224_in22k', pretrained=True)
+        self.extractor = timm.create_model('swin_large_patch4_window7_224_in22k', pretrained=True)
         # self.extractor = load_model_weights(self.extractor, "./models/vit_base_patch16_224_miil_21k.pth")
         # with open("structure.txt", "w") as ftxt:
         #     ftxt.write(str(self.extractor))
@@ -575,39 +575,55 @@ class SwinVit12(nn.Module):
         # prepare, B, C, H, W --> B, S, C
         selected_logits = {"selected":[], "not_selected":[]}
 
-        B, C, H, W = logits.size()
+        B, C, _, _ = logits.size()
         logits = logits.view(B, C, -1).transpose(2, 1).contiguous()
 
-        B, C, H, W = features.size()
+        B, C, _, _ = features.size()
         features = features.view(B, C, -1).transpose(2, 1).contiguous()
 
         # measure probabilitys.
         probs = torch.softmax(logits, dim=-1)
         selected_features = []
         selected_confs = []
-        for bi in range(B):
-            max_ids, _ = torch.max(probs[bi], dim=-1)
-            confs, ranks = torch.sort(max_ids, descending=True)
-            sf = features[bi][ranks[:num_select]]
-            nf = features[bi][ranks[num_select:]]  # calculate
-            selected_features.append(sf) # [num_selected, C]
-            selected_confs.append(confs) # [num_selected]
 
-            selected_logits["selected"]    .append(logits[bi][ranks[:num_select]])
-            selected_logits["not_selected"].append(logits[bi][ranks[num_select:]])
-
-        # Stack Error !
+        # 选择固定先验个数的特征
         # for bi in range(B):
         #     max_ids, _ = torch.max(probs[bi], dim=-1)
         #     confs, ranks = torch.sort(max_ids, descending=True)
-        #     sf = features[bi][ranks[confs > 0.8]]
-        #     nf = features[bi][ranks[confs < 0.5]]
-        #     selected_features.append(sf)
-        #     selected_confs.append(confs)
+        #     sf = features[bi][ranks[:num_select]]
+        #     nf = features[bi][ranks[num_select:]]  # calculate
+        #     selected_features.append(sf) # [num_selected, C]
+        #     selected_confs.append(confs) # [num_selected]
 
-        #     selected_logits["selected"]    .append(logits[bi][ranks[confs > 0.8]])
-        #     selected_logits["not_selected"].append(logits[bi][ranks[confs < 0.5]])
-        
+        #     selected_logits["selected"]    .append(logits[bi][ranks[:num_select]])
+        #     selected_logits["not_selected"].append(logits[bi][ranks[num_select:]])
+
+        # selected_features = torch.stack(selected_features)
+        # selected_confs = torch.stack(selected_confs)
+        # selected_logits["selected"] = torch.stack(selected_logits["selected"])
+        # selected_logits["not_selected"] = torch.stack(selected_logits["not_selected"])
+
+        # 根据置信度 确定 过滤特征数目
+        select_num = 0
+        for bi in range(B):
+            max_ids, _ = torch.max(probs[bi], dim=-1)
+            confs, _ = torch.sort(max_ids, descending=True)
+
+            select_flag = confs > 0.5
+            select_num  = max(select_num,       sum(select_flag))
+
+        for bi in range(B):
+            max_ids, _ = torch.max(probs[bi], dim=-1)
+            confs, ranks = torch.sort(max_ids, descending=True)
+
+            sf = features[bi][ranks[:select_num]]
+            nf = features[bi][ranks[select_num:]]
+            selected_features.append(sf)
+            selected_confs.append(confs)
+
+            selected_logits["selected"]    .append(logits[bi][ranks[:select_num]])
+            selected_logits["not_selected"].append(logits[bi][ranks[select_num:]])
+
         selected_features = torch.stack(selected_features)
         selected_confs = torch.stack(selected_confs)
         selected_logits["selected"] = torch.stack(selected_logits["selected"])
@@ -647,6 +663,7 @@ class SwinVit12(nn.Module):
         # confidences = {}
         accuracys = {}
         losses = {}
+        logs = {}
         selected_features = []
 
         batch_size = x.size(0)
@@ -697,7 +714,11 @@ class SwinVit12(nn.Module):
                     accuracys["l"+str(i)+"_not_selected"] = acc2
                     
                     logits["l"+str(i)+"_selected"] = sl["selected"]
+
+                    sfB, sfC, _ = sf.shape
+                    logs["l"+str(i)+"_sl_cnt"] = sfC
                     # confidences["l"+str(i)+"_selected"] = sc
+
 
         # original prediction.
         if self.use_ori:
@@ -771,6 +792,6 @@ class SwinVit12(nn.Module):
 
         # return
         if return_preds:
-            return losses, accuracys, logits
+            return losses, accuracys, logits, logs
 
-        return losses, accuracys
+        return losses, accuracys, logs
