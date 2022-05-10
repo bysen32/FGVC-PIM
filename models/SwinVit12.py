@@ -609,7 +609,7 @@ class SwinVit12(nn.Module):
             max_ids, _ = torch.max(probs[bi], dim=-1)
             confs, _ = torch.sort(max_ids, descending=True)
 
-            select_flag = confs > 0.2
+            select_flag = confs > 0.1
             select_num  = max(select_num,       sum(select_flag))
 
         for bi in range(B):
