@@ -375,15 +375,15 @@ class SwinVit12(nn.Module):
         # BNC
         self.in_size = in_size
         # 384
-        # self.layer_dims = [[2304, 384],
-        #                    [576, 768],
-        #                    [144, 1536],
-        #                    [144, 1536]]
+        self.layer_dims = [[2304, 384],
+                           [576, 768],
+                           [144, 1536],
+                           [144, 1536]]
         # 224
-        self.layer_dims = [[784, 384],
-                           [196, 768],
-                           [49, 1536],
-                           [49, 1536]]
+        # self.layer_dims = [[784, 384],
+        #                    [196, 768],
+        #                    [49, 1536],
+        #                    [49, 1536]]
 
         self.num_layers = len(self.layer_dims)
         
@@ -405,9 +405,9 @@ class SwinVit12(nn.Module):
 
         # create features extractor
         # test1 'swin_large_patch4_window12_384_in22k'
-        # self.extractor = timm.create_model('swin_large_patch4_window12_384_in22k', pretrained=True)
+        self.extractor = timm.create_model('swin_large_patch4_window12_384_in22k', pretrained=True)
         # test2 'swin_large_patch4_window7_224_in22k'
-        self.extractor = timm.create_model('swin_large_patch4_window7_224_in22k', pretrained=True)
+        # self.extractor = timm.create_model('swin_large_patch4_window7_224_in22k', pretrained=True)
         # self.extractor = load_model_weights(self.extractor, "./models/vit_base_patch16_224_miil_21k.pth")
         # with open("structure.txt", "w") as ftxt:
         #     ftxt.write(str(self.extractor))
@@ -609,7 +609,7 @@ class SwinVit12(nn.Module):
             max_ids, _ = torch.max(probs[bi], dim=-1)
             confs, _ = torch.sort(max_ids, descending=True)
 
-            select_flag = confs > 0.9
+            select_flag = confs > 0.8
             select_num  = max(select_num,       sum(select_flag))
 
         for bi in range(B):
