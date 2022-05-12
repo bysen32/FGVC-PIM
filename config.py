@@ -24,7 +24,7 @@ def get_args():
     parser.add_argument("--debug_mode", default=DEBUG_MODE, type=bool)
     
 
-    parser.add_argument("--data_size", default=224, type=int)
+    parser.add_argument("--data_size", default=384, type=int)
     parser.add_argument("--num_rows", default=0, type=int)
     parser.add_argument("--num_cols", default=0, type=int)
     parser.add_argument("--sub_data_size", default=32, type=int)
