@@ -785,8 +785,6 @@ class SwinVit12(nn.Module):
                 logits["gcn"] = self.gcn(selected_features)
                 losses["gcn"] = self.crossentropy(logits["gcn"], labels)
                 accuracys["gcn"] = self._accuracy(logits["gcn"], labels)
-        
-        torch.distributed.barrier()
 
         for i in range(self.num_layers):
             if self.use_layers[i]:
