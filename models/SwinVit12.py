@@ -609,7 +609,7 @@ class SwinVit12(nn.Module):
             max_ids, _ = torch.max(probs[bi], dim=-1)
             confs, _ = torch.sort(max_ids, descending=True)
 
-            select_flag = confs > 0.5
+            select_flag = confs > 0
             select_num  = max(select_num,       sum(select_flag))
 
         for bi in range(B):
@@ -779,12 +779,10 @@ class SwinVit12(nn.Module):
         # selected prediction.
         if self.use_gcn:
             selected_features = torch.cat(selected_features, dim=1) # B, S, C
-            B, S, D = selected_features.shape
-            if S > 100:
-                selected_features = selected_features.transpose(1, 2).contiguous()
-                logits["gcn"] = self.gcn(selected_features)
-                losses["gcn"] = self.crossentropy(logits["gcn"], labels)
-                accuracys["gcn"] = self._accuracy(logits["gcn"], labels)
+            selected_features = selected_features.transpose(1, 2).contiguous()
+            logits["gcn"] = self.gcn(selected_features)
+            losses["gcn"] = self.crossentropy(logits["gcn"], labels)
+            accuracys["gcn"] = self._accuracy(logits["gcn"], labels)
 
         for i in range(self.num_layers):
             if self.use_layers[i]:
