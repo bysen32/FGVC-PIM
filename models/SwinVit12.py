@@ -587,47 +587,47 @@ class SwinVit12(nn.Module):
         selected_confs = []
 
         # 选择固定先验个数的特征
-        # for bi in range(B):
-        #     max_ids, _ = torch.max(probs[bi], dim=-1)
-        #     confs, ranks = torch.sort(max_ids, descending=True)
-        #     sf = features[bi][ranks[:num_select]]
-        #     nf = features[bi][ranks[num_select:]]  # calculate
-        #     selected_features.append(sf) # [num_selected, C]
-        #     selected_confs.append(confs) # [num_selected]
-
-        #     selected_logits["selected"]    .append(logits[bi][ranks[:num_select]])
-        #     selected_logits["not_selected"].append(logits[bi][ranks[num_select:]])
-
-        # selected_features = torch.stack(selected_features)
-        # selected_confs = torch.stack(selected_confs)
-        # selected_logits["selected"] = torch.stack(selected_logits["selected"])
-        # selected_logits["not_selected"] = torch.stack(selected_logits["not_selected"])
-
-        # 根据置信度 确定 过滤特征数目
-        select_num = 0
-        for bi in range(B):
-            max_ids, _ = torch.max(probs[bi], dim=-1)
-            confs, _ = torch.sort(max_ids, descending=True)
-
-            select_flag = confs > 0
-            select_num  = max(select_num,       sum(select_flag))
-
         for bi in range(B):
             max_ids, _ = torch.max(probs[bi], dim=-1)
             confs, ranks = torch.sort(max_ids, descending=True)
+            sf = features[bi][ranks[:num_select]]
+            nf = features[bi][ranks[num_select:]]  # calculate
+            selected_features.append(sf) # [num_selected, C]
+            selected_confs.append(confs) # [num_selected]
 
-            sf = features[bi][ranks[:select_num]]
-            nf = features[bi][ranks[select_num:]]
-            selected_features.append(sf)
-            selected_confs.append(confs)
-
-            selected_logits["selected"]    .append(logits[bi][ranks[:select_num]])
-            selected_logits["not_selected"].append(logits[bi][ranks[select_num:]])
+            selected_logits["selected"]    .append(logits[bi][ranks[:num_select]])
+            selected_logits["not_selected"].append(logits[bi][ranks[num_select:]])
 
         selected_features = torch.stack(selected_features)
         selected_confs = torch.stack(selected_confs)
         selected_logits["selected"] = torch.stack(selected_logits["selected"])
         selected_logits["not_selected"] = torch.stack(selected_logits["not_selected"])
+
+        # 根据置信度 确定 过滤特征数目
+        # select_num = 0
+        # for bi in range(B):
+        #     max_ids, _ = torch.max(probs[bi], dim=-1)
+        #     confs, _ = torch.sort(max_ids, descending=True)
+
+        #     select_flag = confs > 0
+        #     select_num  = max(select_num,       sum(select_flag))
+
+        # for bi in range(B):
+        #     max_ids, _ = torch.max(probs[bi], dim=-1)
+        #     confs, ranks = torch.sort(max_ids, descending=True)
+
+        #     sf = features[bi][ranks[:select_num]]
+        #     nf = features[bi][ranks[select_num:]]
+        #     selected_features.append(sf)
+        #     selected_confs.append(confs)
+
+        #     selected_logits["selected"]    .append(logits[bi][ranks[:select_num]])
+        #     selected_logits["not_selected"].append(logits[bi][ranks[select_num:]])
+
+        # selected_features = torch.stack(selected_features)
+        # selected_confs = torch.stack(selected_confs)
+        # selected_logits["selected"] = torch.stack(selected_logits["selected"])
+        # selected_logits["not_selected"] = torch.stack(selected_logits["not_selected"])
         
         return selected_features, selected_confs, selected_logits
 
