@@ -1,6 +1,5 @@
-dataset
+datasets
 wandb
 *.pyc
 config.py
-records/CUB200#SwinVit@TWCC1-GCN1-005/data_info/train_indexs.json
-records/CUB200#SwinVit@TWCC1-GCN1-005/data_info/test_indexs.json
+records/*
