@@ -11,19 +11,18 @@ def get_args():
 
     parser = argparse.ArgumentParser("FineGrained Image Classification Task")
     # save path and dataset information
-    parser.add_argument("--exp_name", default="CUB200#SwinVit@ori384+oldselect+contrastA+trans")
+    parser.add_argument("--exp_name", default="CUB200#SwinVit@ori384+select0.5+contrastA+trans")
 
     
     if DEV_MODE:
-        parser.add_argument("--train_root", default="./dataset/train_dev/", type=str) # "../NABirds/train/"
-        parser.add_argument("--val_root", default="./dataset/test_dev/", type=str)
+        parser.add_argument("--train_root", default="./dataset/cub_200_2011/train_dev/", type=str) # "../NABirds/train/"
+        parser.add_argument("--val_root", default="./dataset/cub_200_2011/test_dev/", type=str)
     else:
-        parser.add_argument("--train_root", default="./dataset/train/", type=str) # "../NABirds/train/"
-        parser.add_argument("--val_root", default="./dataset/test/", type=str)
+        parser.add_argument("--train_root", default="./dataset/cub_200_2011/train/", type=str) # "../NABirds/train/"
+        parser.add_argument("--val_root", default="./dataset/cub_200_2011/test/", type=str)
 
     parser.add_argument("--debug_mode", default=DEBUG_MODE, type=bool)
     
-
     parser.add_argument("--data_size", default=384, type=int)
     parser.add_argument("--num_rows", default=0, type=int)
     parser.add_argument("--num_cols", default=0, type=int)

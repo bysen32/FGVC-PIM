@@ -7,6 +7,8 @@ from scipy import ndimage
 import numpy as np
 import copy
 
+BETA = 0.5
+
 def load_model_weights(model, model_path):
     state = torch.load(model_path, map_location='cpu')
     for key in model.state_dict():
@@ -474,6 +476,7 @@ class SwinVit12(nn.Module):
             for n in self.num_selects:
                 if n != 0:
                     num_joints += n
+            num_joints = int(3168 * BETA)
 
             self.gcn = GCNTest(num_joints = num_joints, 
                            in_features = global_feature_dim, 
@@ -680,6 +683,8 @@ class SwinVit12(nn.Module):
                 else:
                     layers[i-1] = getattr(self, "fpn_"+str(i-1))(layers[i-1]) + layers[i]
         
+        all_logits = []
+        all_features = []
         # layers prediction
         for i in range(self.num_layers):
             
@@ -695,29 +700,48 @@ class SwinVit12(nn.Module):
                 # layer predictions.
                 logits["l_"+str(i)] = getattr(self, "classifier_l"+str(i))(layers[i])
 
+                all_logits.append(logits["l_"+str(i)].view(B, C, -1))
+                all_features.append(layers[i].view(B, C, -1))
+
                 # select features.
-                if self.use_selections[i]:
-                    sf, sc, sl = self._select_features(logits=logits["l_"+str(i)], 
-                                                       features=layers[i],
-                                                       num_select=self.num_selects[i])
+                #if self.use_selections[i]:
+                #    sf, sc, sl = self._select_features(logits=logits["l_"+str(i)], 
+                #                                       features=layers[i],
+                #                                       num_select=self.num_selects[i])
 
-                    if self.use_gcn:
-                        selected_features.append(sf) # restore selected features.
+                #    if self.use_gcn:
+                #        selected_features.append(sf) # restore selected features.
 
-                    # compute selected loss.
-                    l_loss_s1,  l_loss_s2 = self._select_loss(sl, labels)
-                    losses["l"+str(i)+"_selected"] = l_loss_s1
-                    losses["l"+str(i)+"_not_selected"] = l_loss_s2
-                    # compute selected accuracy.
-                    acc1, acc2 = self._selected_accuracy(sl, labels)
-                    accuracys["l"+str(i)+"_selected"] = acc1
-                    accuracys["l"+str(i)+"_not_selected"] = acc2
-                    
-                    logits["l"+str(i)+"_selected"] = sl["selected"]
+                #    # compute selected loss.
+                #    l_loss_s1,  l_loss_s2 = self._select_loss(sl, labels)
+                #    losses["l"+str(i)+"_selected"] = l_loss_s1
+                #    losses["l"+str(i)+"_not_selected"] = l_loss_s2
+                #    # compute selected accuracy.
+                #    acc1, acc2 = self._selected_accuracy(sl, labels)
+                #    accuracys["l"+str(i)+"_selected"] = acc1
+                #    accuracys["l"+str(i)+"_not_selected"] = acc2
+                #    
+                #    logits["l"+str(i)+"_selected"] = sl["selected"]
 
-                    sfB, sfC, _ = sf.shape
-                    logs["l"+str(i)+"_sl_cnt"] = sfC
-                    # confidences["l"+str(i)+"_selected"] = sc
+                #    sfB, sfC, _ = sf.shape
+                #    logs["l"+str(i)+"_sl_cnt"] = sfC
+                #    # confidences["l"+str(i)+"_selected"] = sc
+        
+        all_logits = torch.cat(all_logits, dim=2) #B, C, N
+        all_features = torch.cat(all_features, dim=2)
+
+        sf, sc, sl = self._select_features(logits=all_logits, features=all_features, num_select=int(3168*BETA))
+        selected_features.append(sf)
+        # compute selected loss
+        l_loss_s1, l_loss_s2 = self._select_features(sl, labels)
+        losses["la_selected"] = l_loss_s1 
+        losses["la_not_selected"] = l_loss_s2
+        # compute selected accuracy.
+        acc1, acc2 = self._selected_accuracy(sl, labels)
+        accuracys["la_selected"] = acc1
+        accuracys["la_not_selected"] = acc2
+
+        logits["la_selected"] = sl["selected"]
 
 
         # original prediction.
